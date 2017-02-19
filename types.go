@@ -71,19 +71,6 @@ const (
 	ff_is_pointer   uint8 = 5
 	ff_is_relation  uint8 = 6
 	ff_is_interface uint8 = 7
-
-	//go:generate stringer -type=InspectType types.go
-	None InspectType = iota
-	T_Map
-	T_MapKey
-	T_MapValue
-	T_Slice
-	T_SliceElem
-	T_Array
-	T_ArrayElem
-	T_Struct
-	T_StructField
-	T_Inspect
 )
 
 var (
@@ -91,12 +78,6 @@ var (
 
 	cachedModels   *safeModelsMap
 	visitingModels *safeModelsMap
-	// SkipField can be returned from visiting functions to skip visiting
-	// the value of this field. This is only valid in the following functions:
-	//
-	//   - StructField: skips visiting the struct value
-	//
-	SkipField = errors.New("skip this entry")
 
 	errTagSyntax      = errors.New("bad syntax for struct tag pair")
 	errTagKeySyntax   = errors.New("bad syntax for struct tag key")
