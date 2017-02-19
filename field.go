@@ -48,7 +48,11 @@ func (field Field) String() string {
 	tabs := strings.Repeat("\t", field.printNesting)
 	result.WriteString(tabs + "Field Name : " + field.Name + "\n")
 	result.WriteString(tabs + "Field Type : " + field.Type.Name() + "\n")
-	result.WriteString(tabs + fmt.Sprintf("Field Value : `%v", field.Value) + "`\n")
+	if field.Value.IsValid() {
+		result.WriteString(tabs + fmt.Sprintf("Field Value : `%v", field.Value) + "`\n")
+	} else {
+		result.WriteString(tabs + fmt.Sprintf("Invalid Field Value\n"))
+	}
 	result.WriteString(tabs)
 	if field.flags&(1<<ff_is_anonymous) != 0 {
 		result.WriteString("Anonymous ")

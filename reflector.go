@@ -144,7 +144,7 @@ func (m *Reflector) InspectSlice(value reflect.Value) error {
 
 }
 func (m *Reflector) inspectSliceElem(index int, value reflect.Value) error {
-	//fmt.Printf("SliceElem : #%d %v\n", index, value)
+	fmt.Printf("SliceElem : #%d %v\n", index, value)
 	return nil
 }
 
@@ -300,7 +300,6 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 		m.currentField = &Field{
 			Type:  structField.Type,
 			Name:  structField.Name,
-			Value: field,
 		}
 
 		if field.Kind() == reflect.Invalid {
@@ -385,6 +384,7 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 				return err
 			}
 		default:
+			m.currentField.Value = field
 			// by default, we inspect
 			err := m.inspect(field)
 			if err != nil {
