@@ -74,9 +74,11 @@ const (
 )
 
 var (
-	printDebug bool = false
+	printDebug bool = true
 
+	// keeps known models (already visited)
 	cachedModels   *safeModelsMap
+	// keeps a "visit in progress", so we avoid circular references
 	visitingModels *safeModelsMap
 
 	errTagSyntax      = errors.New("bad syntax for struct tag pair")

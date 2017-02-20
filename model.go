@@ -9,11 +9,11 @@ import (
 func (model Model) String() string {
 	var result bytes.Buffer
 	tabs := strings.Repeat("\t", model.printNesting)
-	result.WriteString(tabs + "Model Name : " + model.Name + " \n")
-	result.WriteString(tabs + "Model Type : " + model.ModelType.String() + "\n")
+	result.WriteString(tabs + model.Name + " struct { \n")
 	for _, field := range model.Fields {
 		field.printNesting = model.printNesting + 1
 		result.WriteString(field.String())
 	}
+	result.WriteString(tabs + "}\n")
 	return result.String()
 }

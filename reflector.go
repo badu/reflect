@@ -13,7 +13,7 @@ func (m *Reflector) ComponentsScan(components ...interface{}) error {
 		valueType := value.Type()
 
 		// set current model
-		m.currentModel = &Model{ModelType: valueType, Name: valueType.PkgPath(), printNesting: 0}
+		m.currentModel = &Model{ModelType: valueType, Name: valueType.Name(), printNesting: 0}
 
 		// before visiting, marking it as visiting, so circular references are avoided
 		visitingModels.set(valueType, m.currentModel)
@@ -130,13 +130,15 @@ func (m *Reflector) InspectSlice(value reflect.Value) error {
 
 			newReflector := &Reflector{}
 			// set current model
-			newReflector.currentModel = &Model{ModelType: pointedStruct.Type(), Name: pointedStruct.Type().PkgPath()}
+			newReflector.currentModel = &Model{ModelType: pointedStruct.Type(), Name: pointedStruct.Type().Name()}
 			newReflector.currentModel.printNesting = m.currentModel.printNesting + 1
 			// before visiting, marking it as visiting, so circular references are avoided
 			visitingModels.set(pointedStruct.Type(), newReflector.currentModel)
 			newReflector.visit(pointedStruct)
 			// set the relationship
 			m.currentField.Relation = newReflector.currentModel
+			// set the flag
+			m.currentField.flags = m.currentField.flags | (1 << ff_is_relation)
 		}
 	}
 
@@ -183,9 +185,9 @@ func (m *Reflector) inspect(value reflect.Value) error {
 		switch valuePtr.Kind() {
 		case reflect.Interface:
 			valuePtr = valuePtr.Elem()
+			// fallthrough, since it can be an interface
 			fallthrough
 		case reflect.Ptr:
-
 			value = reflect.Indirect(valuePtr)
 			valuePtr = value
 			isPointer = true
@@ -239,7 +241,7 @@ func (m *Reflector) inspect(value reflect.Value) error {
 
 			newReflector := &Reflector{}
 			// set current model
-			newReflector.currentModel = &Model{ModelType: valueType, Name: valueType.PkgPath()}
+			newReflector.currentModel = &Model{ModelType: valueType, Name: valueType.Name()}
 			newReflector.currentModel.printNesting = m.currentModel.printNesting + 1
 
 			if m.currentField != nil {
@@ -247,9 +249,10 @@ func (m *Reflector) inspect(value reflect.Value) error {
 					fmt.Printf("%s[Visiting] %q -> %q\n", tabs, m.currentField.Name, newReflector.currentModel.ModelType)
 				}
 				m.currentField.Relation = newReflector.currentModel
+				m.currentField.flags = m.currentField.flags | (1 << ff_is_relation)
 			} else {
 				if printDebug {
-					fmt.Printf("%s[level #%d] Visiting NULLFILED -> %q over %q\n", tabs, m.currentModel.printNesting, m.currentModel.ModelType, newReflector.currentModel.ModelType)
+					fmt.Printf("%s[level #%d] Visiting NO CURRENT FIELD -> %q over %q\n", tabs, m.currentModel.printNesting, m.currentModel.ModelType, newReflector.currentModel.ModelType)
 				}
 			}
 
@@ -266,7 +269,7 @@ func (m *Reflector) inspect(value reflect.Value) error {
 				}
 			} else {
 				if printDebug {
-					fmt.Printf("%s[Inspecting] NULLIFIED `%v`\n", tabs, value)
+					fmt.Printf("%s[Inspecting] NO CURRENT FIELD `%v`\n", tabs, value)
 				}
 			}
 			err = m.inspectStruct(value)
@@ -286,8 +289,8 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 		structField := valueType.Field(i)
 		field := value.FieldByIndex([]int{i})
 		if structField.Type.Kind() == reflect.Ptr {
-			//fmt.Printf("%s[Field] %q (valid = %t , nil = %t) `%v`\n", tabs, structField.Name, field.IsValid(), field.IsNil(), field)
-			//fmt.Printf("%s[StructField] %v\n", tabs, structField)
+			fmt.Printf("%s[Field] %q (valid = %t , nil = %t) `%v`\n", tabs, structField.Name, field.IsValid(), field.IsNil(), field)
+			fmt.Printf("%s[StructField] %v\n", tabs, structField)
 		}
 		if structField.Anonymous {
 			if printDebug {
@@ -298,8 +301,8 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 
 		// set current field as a new field
 		m.currentField = &Field{
-			Type:  structField.Type,
-			Name:  structField.Name,
+			Type: structField.Type,
+			Name: structField.Name,
 		}
 
 		if field.Kind() == reflect.Invalid {
@@ -313,10 +316,14 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 		case reflect.Ptr:
 			// set flag to pointer
 			m.currentField.flags = m.currentField.flags | (1 << ff_is_pointer)
+			// fallthrough, since it can be a pointer to a struct, slice, whatever
 			fallthrough
 		case reflect.Struct:
 			// set flag to struct
 			m.currentField.flags = m.currentField.flags | (1 << ff_is_struct)
+			if printDebug {
+				fmt.Printf("%sSTRUCT %q : %q = `%v`\n", tabs, m.currentField.Name, m.currentModel.ModelType, field)
+			}
 			// if it's not a pointer
 			if m.currentField.flags&(1<<ff_is_pointer) == 0 {
 				// TODO : add Scanner, Valuer, Marshaller, Unmarshaller
@@ -325,56 +332,59 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 					// set flag to time
 					m.currentField.flags = m.currentField.flags | (1 << ff_is_time)
 				}
+
 				valueType := field.Type()
 				// check already visiting
-				if cachedValue := visitingModels.get(valueType); cachedValue == nil {
-					newReflector := &Reflector{}
-
-					// set current model
-					newReflector.currentModel = &Model{ModelType: valueType, Name: valueType.PkgPath()}
-					newReflector.currentModel.printNesting = m.currentModel.printNesting + 1
-					// before visiting, marking it as visiting, so circular references are avoided
-					visitingModels.set(valueType, newReflector.currentModel)
-					if printDebug {
-						fmt.Printf("%s[Child struct] %q -> %q\n", tabs, m.currentField.Name, newReflector.currentModel.ModelType)
-
-					}
-					newReflector.visit(field)
-					// set the relationship
-					m.currentField.Relation = newReflector.currentModel
+				if cachedValue := visitingModels.get(valueType); cachedValue != nil {
+					return nil
 				}
+
+				if printDebug {
+					fmt.Printf("%sINSPECT STRUCT %q : %q\n", tabs, m.currentField.Name, m.currentModel.ModelType)
+				}
+				// field has values : visit it
+				err := m.inspect(field)
+				if err != nil {
+					return err
+				}
+
 			} else {
-				// field is nil, we build one to visit it
 				if field.IsNil() {
-					// it's a pointer. dereferencing it
-					pointedElement := m.currentField.Type.Elem()
-					pointedStruct := reflect.New(pointedElement).Elem()
-
-					valueType := pointedStruct.Type()
-					// check already visiting
-					if cachedValue := visitingModels.get(valueType); cachedValue == nil {
-						if printDebug {
-							fmt.Printf("%s[Pointer] %q to a struct %q\n", tabs, m.currentField.Name, valueType.Name())
-						}
-
-						newReflector := &Reflector{}
-						// set current model
-						newReflector.currentModel = &Model{ModelType: valueType, Name: valueType.PkgPath()}
-						newReflector.currentModel.printNesting = m.currentModel.printNesting + 1
-						// before visiting, marking it as visiting, so circular references are avoided
-						visitingModels.set(valueType, newReflector.currentModel)
-						newReflector.visit(pointedStruct)
-						// set the relationship
-						m.currentField.Relation = newReflector.currentModel
-					}
-				} else {
-					// field has values : visit it
-					err := m.inspect(field)
-					if err != nil {
-						return err
+					if printDebug {
+						fmt.Printf("%sNIL STRUCT %q : %q\n", tabs, m.currentField.Name, m.currentModel.ModelType)
 					}
 				}
+				// field is nil, we build one to visit it
+				// it's a pointer. dereferencing it
+
+				pointedElement := m.currentField.Type.Elem()
+				pointedStruct := reflect.New(pointedElement).Elem()
+
+				valueType := pointedStruct.Type()
+				// check already visiting
+				if cachedValue := visitingModels.get(valueType); cachedValue != nil {
+					return nil
+				}
+
+				if printDebug {
+					fmt.Printf("%s[Pointer] %q to a struct %q\n", tabs, m.currentField.Name, valueType.Name())
+				}
+
+				newReflector := &Reflector{}
+				// set current model
+				newReflector.currentModel = &Model{ModelType: valueType, Name: valueType.Name()}
+				newReflector.currentModel.printNesting = m.currentModel.printNesting + 1
+				// before visiting, marking it as visiting, so circular references are avoided
+				visitingModels.set(valueType, newReflector.currentModel)
+				newReflector.visit(pointedStruct)
+				// set the relationship
+				m.currentField.Relation = newReflector.currentModel
+				// set the flag
+				m.currentField.flags = m.currentField.flags | (1 << ff_is_relation)
+
 			}
+			//fmt.Printf("%s - %t, %t\n", tabs, field.IsNil(), field.IsValid())
+
 		case reflect.Slice:
 			// set flag to slice
 			m.currentField.flags = m.currentField.flags | (1 << ff_is_slice)
@@ -396,7 +406,7 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 		m.currentModel.Fields = append(m.currentModel.Fields, m.currentField)
 
 		if printDebug {
-			fmt.Printf("%s[ADD] field %q (%q) = `%v` to %q\n", tabs, m.currentField.Name, m.currentField.Type, m.currentField.Value, m.currentModel.ModelType)
+			fmt.Printf("%s[ADD] %q (%q) = `%v` to %q\n", tabs, m.currentField.Name, m.currentField.Type, m.currentField.Value, m.currentModel.ModelType)
 		}
 	}
 
@@ -414,8 +424,39 @@ func (m *Reflector) visit(value reflect.Value) error {
 	// inspect the value
 	err := m.inspect(value)
 
-	// Set cached model
-	cachedModels.set(valueType, m.currentModel)
+	switch value.Kind() {
+	case
+		reflect.Invalid,
+		reflect.Bool,
+		reflect.Int,
+		reflect.Int8,
+		reflect.Int16,
+		reflect.Int32,
+		reflect.Int64,
+		reflect.Uint,
+		reflect.Uint8,
+		reflect.Uint16,
+		reflect.Uint32,
+		reflect.Uint64,
+		reflect.Uintptr,
+		reflect.Float32,
+		reflect.Float64,
+		reflect.Complex64,
+		reflect.Complex128,
+		reflect.Array,
+		reflect.Chan,
+		reflect.Func,
+		reflect.Interface,
+		reflect.Map,
+		reflect.Ptr,
+		reflect.Slice,
+		reflect.String:
+		// do nothing, it's primitive
+	default:
+		// Set cached model
+		cachedModels.set(valueType, m.currentModel)
+
+	}
 
 	return err
 }
