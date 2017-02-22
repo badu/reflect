@@ -336,6 +336,14 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 				valueType := field.Type()
 				// check already visiting
 				if cachedValue := visitingModels.get(valueType); cachedValue != nil {
+
+					// add the field to current model
+					m.currentModel.Fields = append(m.currentModel.Fields, m.currentField)
+
+					if printDebug {
+						fmt.Printf("%s[ADD] %q (%q) = `%v` to %q\n", tabs, m.currentField.Name, m.currentField.Type, m.currentField.Value, m.currentModel.ModelType)
+					}
+
 					return nil
 				}
 
@@ -363,6 +371,14 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 				valueType := pointedStruct.Type()
 				// check already visiting
 				if cachedValue := visitingModels.get(valueType); cachedValue != nil {
+
+					// add the field to current model
+					m.currentModel.Fields = append(m.currentModel.Fields, m.currentField)
+
+					if printDebug {
+						fmt.Printf("%s[ADD] %q (%q) = `%v` to %q\n", tabs, m.currentField.Name, m.currentField.Type, m.currentField.Value, m.currentModel.ModelType)
+					}
+
 					return nil
 				}
 
