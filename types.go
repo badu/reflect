@@ -77,7 +77,7 @@ var (
 	printDebug bool = true
 
 	// keeps known models (already visited)
-	cachedModels   *safeModelsMap
+	cachedModels *safeModelsMap
 	// keeps a "visit in progress", so we avoid circular references
 	visitingModels *safeModelsMap
 

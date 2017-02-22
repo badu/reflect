@@ -294,9 +294,8 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 		}
 		if structField.Anonymous {
 			if printDebug {
-				fmt.Printf("Skipping Anonymous field %q %s\n", structField.Name, structField.Type)
+				fmt.Printf("Anonymous field %q %s\n", structField.Name, structField.Type)
 			}
-			continue
 		}
 
 		// set current field as a new field

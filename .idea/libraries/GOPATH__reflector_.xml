@@ -1,71 +1,15 @@
 <component name="libraryTable">
   <library name="GOPATH &lt;reflector&gt;">
     <CLASSES>
-      <root url="file://$PROJECT_DIR$/../gopkg.in" />
-      <root url="file://$PROJECT_DIR$/../gox" />
-      <root url="file://$PROJECT_DIR$/../google.golang.org" />
-      <root url="file://$PROJECT_DIR$/../webcms-dev" />
-      <root url="file://$PROJECT_DIR$/../logging" />
-      <root url="file://$PROJECT_DIR$/../go_solutions" />
-      <root url="file://$PROJECT_DIR$/../vitess" />
-      <root url="file://$PROJECT_DIR$/../Greuceanu" />
-      <root url="file://$PROJECT_DIR$/../SideBySideGorm" />
-      <root url="file://$PROJECT_DIR$/../lessons" />
-      <root url="file://$PROJECT_DIR$/../GormBenchmark" />
-      <root url="file://$PROJECT_DIR$/../eCommerce" />
-      <root url="file://$PROJECT_DIR$/../bitbucket.org" />
-      <root url="file://$PROJECT_DIR$/../hugo" />
-      <root url="file://$PROJECT_DIR$/../Revel" />
-      <root url="file://$PROJECT_DIR$/../github.com" />
-      <root url="file://$PROJECT_DIR$/../csr3api" />
-      <root url="file://$PROJECT_DIR$/../Experiments" />
-      <root url="file://$PROJECT_DIR$/../golang.org" />
-      <root url="file://$PROJECT_DIR$/../original_gorm" />
-      <root url="file://$PROJECT_DIR$/../godb" />
-      <root url="file://$PROJECT_DIR$/../smsgateway" />
-      <root url="file://$PROJECT_DIR$/../sqlboiler" />
-      <root url="file://$PROJECT_DIR$/../go-rest" />
-      <root url="file://$PROJECT_DIR$/../gophernotes" />
-      <root url="file://$PROJECT_DIR$/../PhotoxSync" />
-      <root url="file://$PROJECT_DIR$/../gorm" />
-      <root url="file://$PROJECT_DIR$/../Inspector" />
-      <root url="file://$PROJECT_DIR$/../git.activemall.ro" />
-      <root url="file://$PROJECT_DIR$/../anunturi" />
-      <root url="file://$PROJECT_DIR$/../dat" />
+      <root url="file://$PROJECT_DIR$/../src/gopkg.in" />
+      <root url="file://$PROJECT_DIR$/../src/github.com" />
+      <root url="file://$PROJECT_DIR$/../src/golang.org" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="file://$PROJECT_DIR$/../gopkg.in" />
-      <root url="file://$PROJECT_DIR$/../gox" />
-      <root url="file://$PROJECT_DIR$/../google.golang.org" />
-      <root url="file://$PROJECT_DIR$/../webcms-dev" />
-      <root url="file://$PROJECT_DIR$/../logging" />
-      <root url="file://$PROJECT_DIR$/../go_solutions" />
-      <root url="file://$PROJECT_DIR$/../vitess" />
-      <root url="file://$PROJECT_DIR$/../Greuceanu" />
-      <root url="file://$PROJECT_DIR$/../SideBySideGorm" />
-      <root url="file://$PROJECT_DIR$/../lessons" />
-      <root url="file://$PROJECT_DIR$/../GormBenchmark" />
-      <root url="file://$PROJECT_DIR$/../eCommerce" />
-      <root url="file://$PROJECT_DIR$/../bitbucket.org" />
-      <root url="file://$PROJECT_DIR$/../hugo" />
-      <root url="file://$PROJECT_DIR$/../Revel" />
-      <root url="file://$PROJECT_DIR$/../github.com" />
-      <root url="file://$PROJECT_DIR$/../csr3api" />
-      <root url="file://$PROJECT_DIR$/../Experiments" />
-      <root url="file://$PROJECT_DIR$/../golang.org" />
-      <root url="file://$PROJECT_DIR$/../original_gorm" />
-      <root url="file://$PROJECT_DIR$/../godb" />
-      <root url="file://$PROJECT_DIR$/../smsgateway" />
-      <root url="file://$PROJECT_DIR$/../sqlboiler" />
-      <root url="file://$PROJECT_DIR$/../go-rest" />
-      <root url="file://$PROJECT_DIR$/../gophernotes" />
-      <root url="file://$PROJECT_DIR$/../PhotoxSync" />
-      <root url="file://$PROJECT_DIR$/../gorm" />
-      <root url="file://$PROJECT_DIR$/../Inspector" />
-      <root url="file://$PROJECT_DIR$/../git.activemall.ro" />
-      <root url="file://$PROJECT_DIR$/../anunturi" />
-      <root url="file://$PROJECT_DIR$/../dat" />
+      <root url="file://$PROJECT_DIR$/../src/gopkg.in" />
+      <root url="file://$PROJECT_DIR$/../src/github.com" />
+      <root url="file://$PROJECT_DIR$/../src/golang.org" />
     </SOURCES>
     <excluded>
       <root url="file://$PROJECT_DIR$" />

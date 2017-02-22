@@ -67,7 +67,7 @@ func (field Field) String() string {
 		result.WriteString(tabs + "\t" + field.Type.Name() + "\n")
 	}
 	// if it's a relation, but not Time
-	if field.flags&(1<<ff_is_relation) != 0 && field.flags&(1<<ff_is_time) == 0{
+	if field.flags&(1<<ff_is_relation) != 0 && field.flags&(1<<ff_is_time) == 0 {
 		//field.Relation.printNesting = field.printNesting + 1
 		//result.WriteString(tabs + "Relation :\n")
 		result.WriteString(field.Relation.String())
