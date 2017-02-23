@@ -53,7 +53,6 @@ type (
 	// Reflector
 	Reflector struct {
 		currentModel  *Model
-		currentField  *Field
 		MethodsLookup []string
 	}
 

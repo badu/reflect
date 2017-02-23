@@ -6,6 +6,12 @@ import (
 )
 
 type (
+
+	NullString struct {
+		String string
+		Valid bool
+	}
+
 	Entity struct {
 		Id        uint64
 		CreatedAt time.Time
@@ -15,13 +21,19 @@ type (
 
 	Address struct {
 		Entity
-		Street string
+		Street NullString
+	}
+
+	User struct {
+		Entity
+		Username string
 	}
 
 	Customer struct {
 		Entity
 		Name      string
 		Addresses []*Address
+		Users     []*User
 	}
 
 	Price struct {
@@ -42,7 +54,7 @@ type (
 		Entity
 		Customer  *Customer
 		Items     []*Item
-		ExpiresAt *time.Time
+		ExpiresAt time.Time
 	}
 
 	InvoiceInterface interface {
@@ -66,5 +78,4 @@ func TestOne(t *testing.T) {
 	}
 
 	t.Logf("%v", r.currentModel)
-
 }

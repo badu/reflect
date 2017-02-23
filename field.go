@@ -144,7 +144,7 @@ func (field Field) String() string {
 		result.WriteString("[]")
 	}
 	if field.flags&(1<<ff_is_anonymous) != 0 {
-		result.WriteString("Anonymous ")
+		result.WriteString("(embedded) ")
 	}
 	if field.flags&(1<<ff_is_map) != 0 {
 		result.WriteString("Map ")
@@ -157,7 +157,7 @@ func (field Field) String() string {
 	}
 	if field.flags&(1<<ff_is_struct) == 0 {
 		// not a struct
-		result.WriteString(tabs + "\t" + field.Type.Name() + "\n")
+		result.WriteString(tabs + "\t having = " + field.Type.Name() + "\n")
 	}
 	// if it's a relation, but not Time
 	if field.flags&(1<<ff_is_relation) != 0 && field.flags&(1<<ff_is_time) == 0 {
