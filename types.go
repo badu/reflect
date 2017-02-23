@@ -44,8 +44,10 @@ type (
 	Model struct {
 		Name         string
 		ModelType    reflect.Type
+		Value        reflect.Value
 		Fields       []*Field
 		printNesting int
+		visited      bool
 	}
 
 	// Reflector
@@ -78,8 +80,6 @@ var (
 
 	// keeps known models (already visited)
 	cachedModels *safeModelsMap
-	// keeps a "visit in progress", so we avoid circular references
-	visitingModels *safeModelsMap
 
 	errTagSyntax      = errors.New("bad syntax for struct tag pair")
 	errTagKeySyntax   = errors.New("bad syntax for struct tag key")

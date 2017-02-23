@@ -30,20 +30,41 @@ type (
 		Value float64
 	}
 
+	PricesCollection []*Price
+
 	Item struct {
 		Entity
 		Name   string
-		Prices []*Price
+		Prices PricesCollection
 	}
 
 	Invoice struct {
 		Entity
-		Customer *Customer
-		Items    []*Item
+		Customer  *Customer
+		Items     []*Item
+		ExpiresAt *time.Time
+	}
+
+	InvoiceInterface interface {
+		Print()
 	}
 )
 
+func (i Invoice) Print() {
+
+}
+
+func (i *Invoice) Send() {
+
+}
+
 func TestOne(t *testing.T) {
 	r := &Reflector{}
-	r.ComponentsScan(Invoice{})
+	err := r.ComponentsScan(Invoice{})
+	if err != nil {
+		t.Fatalf("Error : %v", err)
+	}
+
+	t.Logf("%v", r.currentModel)
+
 }
