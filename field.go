@@ -5,12 +5,15 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
+
 // should remain unused
 func (field *Field) setFlag(value uint8) {
 	field.flags = field.flags | (1 << value)
 }
+
 // should remain unused
 func (field *Field) unsetFlag(value uint8) {
 	field.flags = field.flags & ^(1 << value)
@@ -134,6 +137,86 @@ func (field *Field) Set(value interface{}) error {
 	return err
 }
 
+// Parse parses a single struct field tag and returns the set of tags.
+func (field Field) ParseStructTag(tag string) (*Tags, error) {
+	var tags []*Tag
+
+	// NOTE(arslan) following code is from reflect and vet package with some
+	// modifications to collect all necessary information and extend it with
+	// usable methods
+	for tag != "" {
+		// Skip leading space.
+		i := 0
+		for i < len(tag) && tag[i] == ' ' {
+			i++
+		}
+		tag = tag[i:]
+		if tag == "" {
+			return nil, nil
+		}
+
+		// Scan to colon. A space, a quote or a control character is a syntax
+		// error. Strictly speaking, control chars include the range [0x7f,
+		// 0x9f], not just [0x00, 0x1f], but in practice, we ignore the
+		// multi-byte control characters as it is simpler to inspect the tag's
+		// bytes than the tag's runes.
+		i = 0
+		for i < len(tag) && tag[i] > ' ' && tag[i] != ':' && tag[i] != '"' && tag[i] != 0x7f {
+			i++
+		}
+
+		if i == 0 {
+			return nil, errTagKeySyntax
+		}
+		if i+1 >= len(tag) || tag[i] != ':' {
+			return nil, errTagSyntax
+		}
+		if tag[i+1] != '"' {
+			return nil, errTagValueSyntax
+		}
+
+		key := string(tag[:i])
+		tag = tag[i+1:]
+
+		// Scan quoted string to find value.
+		i = 1
+		for i < len(tag) && tag[i] != '"' {
+			if tag[i] == '\\' {
+				i++
+			}
+			i++
+		}
+		if i >= len(tag) {
+			return nil, errTagValueSyntax
+		}
+
+		qvalue := string(tag[:i+1])
+		tag = tag[i+1:]
+
+		value, err := strconv.Unquote(qvalue)
+		if err != nil {
+			return nil, errTagValueSyntax
+		}
+
+		res := strings.Split(value, ",")
+		name := res[0]
+		options := res[1:]
+		if len(options) == 0 {
+			options = nil
+		}
+
+		tags = append(tags, &Tag{
+			Key:     key,
+			Name:    name,
+			Options: options,
+		})
+	}
+
+	return &Tags{
+		tags: tags,
+	}, nil
+}
+
 // Stringer implementation
 func (field Field) String() string {
 	var result bytes.Buffer
@@ -141,39 +224,52 @@ func (field Field) String() string {
 	result.WriteString(tabs + field.Name + "\t")
 
 	if field.flags&(1<<ff_is_slice) != 0 {
-		result.WriteString("[]")
+		if field.flags&(1<<ff_is_pointer) != 0 {
+			result.WriteString("[]*" + field.Relation.ModelType.Name())
+		} else {
+			result.WriteString("[]" + field.Relation.ModelType.Name())
+		}
+
+	} else {
+		if field.flags&(1<<ff_is_pointer) != 0 {
+			result.WriteString("*")
+		}
 	}
+
 	if field.flags&(1<<ff_is_anonymous) != 0 {
 		result.WriteString("(embedded) ")
 	}
+
 	if field.flags&(1<<ff_is_map) != 0 {
 		result.WriteString("Map ")
 	}
-	if field.flags&(1<<ff_is_pointer) != 0 {
-		result.WriteString("*")
-	}
+
 	if field.flags&(1<<ff_is_interface) != 0 {
 		result.WriteString("Interface ")
 	}
-	if field.flags&(1<<ff_is_struct) == 0 {
-		// not a struct
-		result.WriteString(tabs + "\t having = " + field.Type.Name() + "\n")
-	}
-	// if it's a relation, but not Time
-	if field.flags&(1<<ff_is_relation) != 0 && field.flags&(1<<ff_is_time) == 0 {
-		//field.Relation.printNesting = field.printNesting + 1
-		//result.WriteString(tabs + "Relation :\n")
-		result.WriteString(field.Relation.String())
-	}
+
 	if field.flags&(1<<ff_is_time) != 0 {
 		result.WriteString("time.Time\n")
 	}
-	/**
-	if field.Value.IsValid() {
-		result.WriteString(tabs + fmt.Sprintf("Field Value : `%v", field.Value) + "`\n")
+
+	if field.flags&(1<<ff_is_struct) == 0 {
+		// not a struct
+		result.WriteString(tabs + "\t " + field.Type.Name() + "\n")
+		for _, t := range field.Tags.Tags() {
+			result.WriteString(tabs + "\t\ttag: " + t.String() + "\n")
+		}
+
 	} else {
-		result.WriteString(tabs + fmt.Sprintf("Invalid Field Value\n"))
+		//it's a struct, but not time
+		if field.flags&(1<<ff_is_time) == 0 {
+			result.WriteString(field.Relation.ModelType.Name() + "\n")
+		}
 	}
-	**/
+
+	// if it's a relation, but not Time and it's not self reference
+	if field.flags&(1<<ff_is_relation) != 0 && field.flags&(1<<ff_is_time) == 0 && field.flags&(1<<ff_is_self_reference) == 0 {
+		result.WriteString(field.Relation.String())
+	}
+
 	return result.String()
 }

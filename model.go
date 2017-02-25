@@ -7,21 +7,30 @@ import (
 )
 
 func (model *Model) addField(field *Field) {
-
-	tabs := strings.Repeat("\t", model.printNesting)
-
+	/**
+		_, file, line, ok := runtime.Caller(1)
+		if ok {
+			fmt.Printf("%s %d %s\n", model.tabs(), line, file)
+		}
+	**/
 	if printDebug {
-		fmt.Printf("%s[ADD] %s %s to %s (`%v`)\n", tabs, field.Name, field.Type, model.Name, field.Value)
+		fmt.Printf("%s[ADD] %q %q to %q (`%v`)\n", model.tabs(), field.Name, field.Type, model.ModelType.Name(), field.Value)
 	}
-
 	model.Fields = append(model.Fields, field)
+}
+
+func (model *Model) tabs() string {
+	if model.printTabs == "" {
+		model.printTabs = strings.Repeat("\t", model.printNesting)
+	}
+	return model.printTabs
 }
 
 // Stringer implementation
 func (model Model) String() string {
 	var result bytes.Buffer
 	tabs := strings.Repeat("\t", model.printNesting)
-	result.WriteString(tabs +"`" + model.Name + "` struct { \n")
+	result.WriteString(tabs + "`" + model.ModelType.Name() + "` struct { \n")
 	for _, field := range model.Fields {
 		field.printNesting = model.printNesting + 1
 		result.WriteString(field.String())
