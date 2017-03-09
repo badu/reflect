@@ -74,24 +74,26 @@ type (
 )
 
 // a method for white list lookup
-func (i Invoice) Print() {
-
-}
+func (i Invoice) Print() {}
 
 // a method for white list lookup
-func (i *Invoice) Send() {
-
-}
+func (i *Invoice) Send() {}
 
 // Stringer implementation
-func (i Invoice) String() string {
-	return "Invoice Stringer"
-}
+func (i Invoice) String() string { return "Invoice Stringer" }
+
+func (i Item) Print() {}
+
+func (i Item) String() string { return "Item Stringer" }
+
+func (p Price) Print() {}
+
+func (p Price) String() string { return "Price Stringer" }
 
 // Test scan invoice
 func TestInvoice(t *testing.T) {
 	r := &Reflector{}
-	r.MethodsLookup = []string{"Print", "Send"}
+	r.MethodsLookup = []string{"Print", "Send", "String"}
 	err := r.ComponentsScan(Invoice{})
 	if err != nil {
 		t.Fatalf("Error : %v", err)

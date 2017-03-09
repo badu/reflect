@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func (m *Reflector) ComponentsScan(components ...interface{}) error {
+func (r *Reflector) ComponentsScan(components ...interface{}) error {
 	for _, component := range components {
 		value := reflect.ValueOf(component)
 		valueType := value.Type()
@@ -16,9 +16,10 @@ func (m *Reflector) ComponentsScan(components ...interface{}) error {
 		}
 
 		// set current model
-		m.currentModel = &Model{ModelType: valueType, printNesting: 0}
+		r.currentModel = &Model{ModelType: valueType, printNesting: 0}
+		r.currentModel.Methods = make(map[string]bool)
 
-		err := m.visit(value)
+		err := r.visit(value)
 
 		if err != nil {
 			return err
@@ -27,20 +28,20 @@ func (m *Reflector) ComponentsScan(components ...interface{}) error {
 	return nil
 }
 
-func (m *Reflector) inspectMap(value reflect.Value) error {
+func (r *Reflector) inspectMap(value reflect.Value) error {
 
 	for _, key := range value.MapKeys() {
 		keyValue := value.MapIndex(key)
 
-		if err := m.inspectMapKeyValue(value, key, keyValue); err != nil {
+		if err := r.inspectMapKeyValue(value, key, keyValue); err != nil {
 			return err
 		}
 
-		if err := m.inspect(key); err != nil {
+		if err := r.inspect(key); err != nil {
 			return err
 		}
 
-		if err := m.inspect(keyValue); err != nil {
+		if err := r.inspect(keyValue); err != nil {
 			return err
 		}
 
@@ -49,16 +50,16 @@ func (m *Reflector) inspectMap(value reflect.Value) error {
 	return nil
 }
 
-func (m *Reflector) inspectSlice(value reflect.Value) error {
+func (r *Reflector) inspectSlice(value reflect.Value) error {
 
 	for i := 0; i < value.Len(); i++ {
 		elem := value.Index(i)
 
-		if err := m.inspectSliceElem(i, elem); err != nil {
+		if err := r.inspectSliceElem(i, elem); err != nil {
 			return err
 		}
 
-		if err := m.inspect(elem); err != nil {
+		if err := r.inspect(elem); err != nil {
 			return err
 		}
 
@@ -67,16 +68,16 @@ func (m *Reflector) inspectSlice(value reflect.Value) error {
 	return nil
 }
 
-func (m *Reflector) inspectArray(value reflect.Value) error {
+func (r *Reflector) inspectArray(value reflect.Value) error {
 
 	for i := 0; i < value.Len(); i++ {
 		elem := value.Index(i)
 
-		if err := m.InspectArrayElem(i, elem); err != nil {
+		if err := r.InspectArrayElem(i, elem); err != nil {
 			return err
 		}
 
-		if err := m.inspect(elem); err != nil {
+		if err := r.inspect(elem); err != nil {
 			return err
 		}
 
@@ -85,22 +86,22 @@ func (m *Reflector) inspectArray(value reflect.Value) error {
 	return nil
 }
 
-func (m *Reflector) inspectMapKeyValue(theMap, key, value reflect.Value) error {
+func (r *Reflector) inspectMapKeyValue(theMap, key, value reflect.Value) error {
 	//fmt.Printf("MapElem %v %v\n", key, value)
 	return nil
 }
 
-func (m *Reflector) inspectSliceElem(index int, value reflect.Value) error {
+func (r *Reflector) inspectSliceElem(index int, value reflect.Value) error {
 	fmt.Printf("SliceElem : #%d %v\n", index, value)
 	return nil
 }
 
-func (m *Reflector) InspectArrayElem(index int, value reflect.Value) error {
+func (r *Reflector) InspectArrayElem(index int, value reflect.Value) error {
 	//fmt.Printf("ArrayElem: #%d %v\n", index, value)
 	return nil
 }
 
-func (m *Reflector) inspect(value reflect.Value) error {
+func (r *Reflector) inspect(value reflect.Value) error {
 	// Determine if we're receiving a pointer and if so notify the
 	// The logic here is convoluted but very important (tests will fail if
 	// almost any part is changed).
@@ -150,7 +151,7 @@ func (m *Reflector) inspect(value reflect.Value) error {
 	}
 
 	if printDebug {
-		fmt.Printf("%s[level #%d] Current model type : %q\n", m.currentModel.tabs(), m.currentModel.printNesting, m.currentModel.ModelType)
+		fmt.Printf("%s[level #%d] Current model type : %q\n", r.currentModel.tabs(), r.currentModel.printNesting, r.currentModel.ModelType)
 	}
 
 	switch kind {
@@ -158,13 +159,13 @@ func (m *Reflector) inspect(value reflect.Value) error {
 		// Primitives
 		return nil
 	case reflect.Map:
-		err = m.inspectMap(value)
+		err = r.inspectMap(value)
 		return err
 	case reflect.Slice:
-		err = m.inspectSlice(value)
+		err = r.inspectSlice(value)
 		return err
 	case reflect.Array:
-		err = m.inspectArray(value)
+		err = r.inspectArray(value)
 		return err
 	case reflect.Struct:
 		if !isPointer {
@@ -173,7 +174,7 @@ func (m *Reflector) inspect(value reflect.Value) error {
 				fmt.Printf("%sNot a ponter. inspecting struct %s\n",tabs, m.currentModel.Name)
 			}
 			**/
-			err = m.inspectStruct(value)
+			err = r.inspectStruct(value)
 			return err
 		}
 	default:
@@ -182,7 +183,7 @@ func (m *Reflector) inspect(value reflect.Value) error {
 	return err
 }
 
-func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value) (*Field, error) {
+func (r *Reflector) inspectField(field reflect.StructField, value reflect.Value) (*Field, error) {
 	var err error
 	var pointedElement reflect.Type
 	var pointedStruct reflect.Value
@@ -208,7 +209,7 @@ func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value)
 		// set flag to pointer
 		result.flags = result.flags | (1 << ff_is_pointer)
 		if printDebug {
-			fmt.Printf("%s[PTR] %q (valid = %t , nil = %t) `%v`\n", m.currentModel.tabs(), field.Name, value.IsValid(), value.IsNil(), value)
+			fmt.Printf("%s[PTR] %q (valid = %t , nil = %t) `%v`\n", r.currentModel.tabs(), field.Name, value.IsValid(), value.IsNil(), value)
 		}
 		// fallthrough, since it can be a pointer to a struct, slice, whatever
 		fallthrough
@@ -232,7 +233,7 @@ func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value)
 			}
 
 			// check if it's self reference
-			if m.currentModel.ModelType.Name() == result.Type.Name() {
+			if r.currentModel.ModelType.Name() == result.Type.Name() {
 				// set self referenced flag, so printing won't go in infinite loop
 				result.flags = result.flags | (1 << ff_is_self_reference)
 			}
@@ -247,7 +248,7 @@ func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value)
 				result.Relation = &Model{
 					ModelType:    result.Type,
 					Value:        value,
-					printNesting: m.currentModel.printNesting + 1}
+					printNesting: r.currentModel.printNesting + 1}
 			}
 
 		} else {
@@ -260,11 +261,11 @@ func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value)
 			valueType := pointedStruct.Type()
 
 			if printDebug {
-				fmt.Printf("%sPTRSTRUCTFIELD %q %v\n", m.currentModel.tabs(), result.Name, valueType)
+				fmt.Printf("%sPTRSTRUCTFIELD %q %v\n", r.currentModel.tabs(), result.Name, valueType)
 			}
 
 			// check if it's self reference
-			if m.currentModel.ModelType.Name() == valueType.Name() {
+			if r.currentModel.ModelType.Name() == valueType.Name() {
 				// set self referenced flag, so printing won't go in infinite loop
 				result.flags = result.flags | (1 << ff_is_self_reference)
 			}
@@ -275,7 +276,7 @@ func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value)
 			// Get cached Model
 			if cachedValue := cachedModels.get(valueType); cachedValue != nil {
 				if printDebug {
-					fmt.Printf("%sCACHED : %v\n", m.currentModel.tabs(), valueType)
+					fmt.Printf("%sCACHED : %v\n", r.currentModel.tabs(), valueType)
 				}
 				result.Relation = cachedValue
 			} else {
@@ -284,7 +285,7 @@ func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value)
 				result.Relation = &Model{
 					ModelType:    valueType,
 					Value:        pointedStruct,
-					printNesting: m.currentModel.printNesting + 1}
+					printNesting: r.currentModel.printNesting + 1}
 			}
 
 		}
@@ -301,7 +302,7 @@ func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value)
 		pointedStruct = reflect.New(pointedElement).Elem()
 
 		// check for self reference
-		if m.currentModel.ModelType.Name() == pointedStruct.Type().Name() {
+		if r.currentModel.ModelType.Name() == pointedStruct.Type().Name() {
 			// set self referenced flag, so printing won't go in infinite loop
 			result.flags = result.flags | (1 << ff_is_self_reference)
 		}
@@ -318,12 +319,12 @@ func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value)
 			result.Relation = &Model{
 				ModelType:    pointedStruct.Type(),
 				Value:        pointedStruct,
-				printNesting: m.currentModel.printNesting + 1}
+				printNesting: r.currentModel.printNesting + 1}
 
 		}
 
 		// inspect it
-		err = m.inspect(value)
+		err = r.inspect(value)
 
 	case
 		reflect.Invalid,
@@ -347,16 +348,29 @@ func (m *Reflector) inspectField(field reflect.StructField, value reflect.Value)
 		// primitive
 	default:
 		if printDebug {
-			fmt.Printf("%sDEFAULT %v of %s\n", m.currentModel.tabs(), value, result.Name)
+			fmt.Printf("%sDEFAULT %v of %s\n", r.currentModel.tabs(), value, result.Name)
 		}
 		// by default, we inspect
-		err = m.inspect(value)
+		err = r.inspect(value)
 
 	}
 	return result, err
 }
 
-func (m *Reflector) inspectStruct(value reflect.Value) error {
+func (r *Reflector) inspectMethods(typ reflect.Type) error {
+	for _, methodName := range r.MethodsLookup {
+		_, has := typ.MethodByName(methodName)
+		if has {
+			if printDebug {
+				fmt.Printf("%s %v HAS METHOD %q\n", r.currentModel.tabs(), r.currentModel.ModelType, methodName)
+			}
+			r.currentModel.Methods[methodName] = true
+		}
+	}
+	return nil
+}
+
+func (r *Reflector) inspectStruct(value reflect.Value) error {
 
 	valueType := value.Type()
 	/**
@@ -364,6 +378,8 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 		fmt.Printf("%sInspect struct %s\n", tabs, m.currentModel.Name)
 	}
 	**/
+	r.inspectMethods(valueType)
+
 	var inspectedField *Field
 	var err error
 
@@ -386,11 +402,11 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 				**/
 				// force anonymous to true, because it has to set the flag
 				subStructField.Anonymous = true
-				inspectedField, err = m.inspectField(subStructField, subField)
+				inspectedField, err = r.inspectField(subStructField, subField)
 
 				if err == nil {
 					// add the field to current model
-					m.currentModel.addField(inspectedField)
+					r.currentModel.addField(inspectedField)
 				}
 			}
 		} else {
@@ -401,16 +417,16 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 			**/
 			if field.Kind() == reflect.Invalid {
 				if printDebug {
-					fmt.Printf("%sINVALID FIELD : %q = %q\n", m.currentModel.tabs(), structField.Name, structField.Type)
+					fmt.Printf("%sINVALID FIELD : %q = %q\n", r.currentModel.tabs(), structField.Name, structField.Type)
 				}
 				continue
 			}
 
-			inspectedField, err = m.inspectField(structField, field)
+			inspectedField, err = r.inspectField(structField, field)
 
 			if err == nil {
 				// add the field to current model
-				m.currentModel.addField(inspectedField)
+				r.currentModel.addField(inspectedField)
 			}
 		}
 
@@ -419,7 +435,7 @@ func (m *Reflector) inspectStruct(value reflect.Value) error {
 	return nil
 }
 
-func (m *Reflector) visit(value reflect.Value) error {
+func (r *Reflector) visit(value reflect.Value) error {
 	var err error
 
 	valueType := value.Type()
@@ -452,37 +468,37 @@ func (m *Reflector) visit(value reflect.Value) error {
 		// do nothing, it's primitive
 	default:
 		if printDebug {
-			fmt.Printf("%s->Visiting %s\n", m.currentModel.tabs(), m.currentModel.ModelType)
+			fmt.Printf("%s->Visiting %s\n", r.currentModel.tabs(), r.currentModel.ModelType)
 		}
 		// inspect the value
-		err = m.inspect(value)
+		err = r.inspect(value)
 
-		m.currentModel.visited = true
+		r.currentModel.visited = true
 		// Set cached model
-		cachedModels.set(valueType, m.currentModel)
+		cachedModels.set(valueType, r.currentModel)
 
 		if printDebug {
-			fmt.Printf("%s<-Finished Visiting %s\n\n", m.currentModel.tabs(), m.currentModel.ModelType)
+			fmt.Printf("%s<-Finished Visiting %s\n\n", r.currentModel.tabs(), r.currentModel.ModelType)
 		}
 
 	}
 
-	for _, field := range m.currentModel.Fields {
-		if field.HasRelation() {
-			if !field.Relation.visited {
+	for _, field := range r.currentModel.Fields {
+		if field.HasRelation() && !field.Relation.visited {
 
-				if printDebug {
-					fmt.Printf("%s%q %q -> %q\n", m.currentModel.tabs(), field.Name, field.Type, field.Relation.ModelType)
-				}
-				// TODO : check where the model name is set wrong (see Street struct)
-				newReflector := &Reflector{}
-				newReflector.currentModel = field.Relation
-				err = newReflector.visit(field.Relation.Value)
-				if err != nil {
-					return err
-				}
-				field.Relation.visited = true
+			if printDebug {
+				fmt.Printf("%s%q %q -> %q\n", r.currentModel.tabs(), field.Name, field.Type, field.Relation.ModelType)
 			}
+			// TODO : check where the model name is set wrong (see Street struct)
+			newReflector := &Reflector{MethodsLookup: r.MethodsLookup}
+			newReflector.currentModel = field.Relation
+			newReflector.currentModel.Methods = make(map[string]bool)
+			err = newReflector.visit(field.Relation.Value)
+			if err != nil {
+				return err
+			}
+			field.Relation.visited = true
+
 		}
 	}
 

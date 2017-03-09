@@ -37,10 +37,10 @@ type (
 		ModelType    reflect.Type
 		Value        reflect.Value // value is needed to pass over non-initialized structs
 		Fields       []*Field
-		Methods      map[string]Function // temporary - TODO : use func
-		printNesting int                 // internal, for printing tabs
-		printTabs    string              // internal, for printing tabs
-		visited      bool                // internal, for keeping track of visited models
+		Methods      map[string]bool // has the method from method lookup
+		printNesting int             // internal, for printing tabs
+		printTabs    string          // internal, for printing tabs
+		visited      bool            // internal, for keeping track of visited models
 	}
 
 	// Reflector

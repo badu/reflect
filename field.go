@@ -141,9 +141,6 @@ func (field *Field) Set(value interface{}) error {
 func (field Field) ParseStructTag(tag string) (*Tags, error) {
 	var tags []*Tag
 
-	// NOTE(arslan) following code is from reflect and vet package with some
-	// modifications to collect all necessary information and extend it with
-	// usable methods
 	for tag != "" {
 		// Skip leading space.
 		i := 0
@@ -222,6 +219,11 @@ func (field Field) String() string {
 	var result bytes.Buffer
 	tabs := strings.Repeat("\t", field.printNesting)
 	result.WriteString(tabs + field.Name + "\t")
+
+	if field.printNesting > 10 {
+		result.WriteString(tabs + "Nesting exceeded 20 levels.\t")
+		return result.String()
+	}
 
 	if field.flags&(1<<ff_is_slice) != 0 {
 		if field.flags&(1<<ff_is_pointer) != 0 {
