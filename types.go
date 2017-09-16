@@ -21,9 +21,9 @@ type (
 		tags []*Tag
 	}
 
-	// Field
+	// Field - flags are not uint16 because of padding
 	Field struct {
-		flags        uint16 // flags that indicates pointer, struct, slice, etc - see below
+		flags        uint64 // flags that indicates pointer, struct, slice, etc - see below
 		Name         string
 		Type         reflect.Type
 		Value        reflect.Value
