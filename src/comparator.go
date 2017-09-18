@@ -244,10 +244,6 @@ func Compare(oldStruct interface{}, newStruct interface{}, onlyFields []string) 
 				// for embedded structs
 				for j, subNumFields := 0, oldSubField.NumField(); j < subNumFields; j++ {
 					subField := subStructType.Field(j)
-					if subField.Name != currentSubfieldName {
-						// optimization skip field (it's not the one we're searching
-						continue
-					}
 					if subField.PkgPath != "" {
 						//If the field name is unexported, skip
 						continue
