@@ -23,10 +23,12 @@ type (
 		Valid  bool
 		Uint64 uint64
 	}
+
 	NullTime struct {
 		Valid bool
 		Time  time.Time
 	}
+
 	Timestamp struct {
 		time.Time
 	}
@@ -149,6 +151,13 @@ func TestComparator(t *testing.T) {
 				Quantity:     1,
 				Type:         ProductQuoteItem,
 				OriginalName: "Product 21",
+				Prices: QuoteItemPricesCollection{
+					{
+						Id:    451,
+						Type:  DiscountPercent,
+						Value: 10,
+					},
+				},
 			},
 		},
 		Prices: QuoteItemPricesCollection{
@@ -206,7 +215,15 @@ func TestComparator(t *testing.T) {
 				if !ok1 {
 					t.Fatalf("Error : cannot convert 1.")
 				}
-				fmt.Printf("%q removed %v\n", difference.FieldName, item1)
+				if difference.NewValue == nil {
+					fmt.Printf("%q removed %v\n", difference.FieldName, item1)
+				} else {
+					item2, ok2 := difference.NewValue.(QuoteItem)
+					if !ok2 {
+						t.Fatalf("Error : cannot convert 2 : %v", difference.NewValue)
+					}
+					fmt.Printf("%q updated %v -> %v\n", difference.FieldName, item1, item2)
+				}
 			}
 			if difference.NewValue != nil {
 				item2, ok2 := difference.NewValue.(QuoteItem)

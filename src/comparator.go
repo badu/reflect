@@ -153,13 +153,16 @@ func Compare(oldStruct interface{}, newStruct interface{}, onlyFields []string) 
 						newElem = newElem.Elem()
 					}
 					if newElem.FieldByName("Id").Interface() == oldElemId {
+						// item "might" be updated (check outside)
+						result := &CompareResult{FieldName: currentFieldName, OldValue: oldElem.Interface(), NewValue: newElem.Interface(), IsSlice: true}
+						differences = append(differences, result)
 						foundInOld = true
 						break
 					}
 
 				}
 				if !foundInOld {
-
+					// item was removed from slice
 					result := &CompareResult{FieldName: currentFieldName, OldValue: oldElem.Interface(), NewValue: nil, IsSlice: true}
 					differences = append(differences, result)
 				}
@@ -183,6 +186,7 @@ func Compare(oldStruct interface{}, newStruct interface{}, onlyFields []string) 
 					}
 				}
 				if !foundInNew {
+					// item was added to slice
 					result := &CompareResult{FieldName: currentFieldName, OldValue: nil, NewValue: newElem.Interface(), IsSlice: true}
 					differences = append(differences, result)
 				}
