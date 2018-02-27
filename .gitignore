@@ -1,2 +1,4 @@
 /Notes.md
 /.idea/*
+/src/bitset.go
+/src/bitset_test.go
