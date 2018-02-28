@@ -51,7 +51,7 @@ func Compare(oldStruct interface{}, newStruct interface{}, onlyFields []string) 
 
 	//Verify v1 is a struct, if v1 is a struct then v2 is also a struct because we have already verified the types are equal
 	if oldValue.Kind() != reflect.Struct || newValue.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("Comparator : Types must both be structs.  Kind1: %v, Kind2 :v", oldValue.Kind(), newValue.Kind())
+		return nil, fmt.Errorf("Comparator : Types must both be structs.  Kind1: %v, Kind2 :%v", oldValue.Kind(), newValue.Kind())
 	}
 
 	//Initialize differences to ensure length of 0 on return
