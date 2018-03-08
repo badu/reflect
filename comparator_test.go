@@ -7,17 +7,17 @@ import (
 )
 
 const (
-	PackageQuoteItem Uint32 = 1
-	ProductQuoteItem Uint32 = 2
+	PackageQuoteItem Uint32_2 = 1
+	ProductQuoteItem Uint32_2 = 2
 
-	DiscountPercent Uint32 = 1
-	DiscountFixed   Uint32 = 2
+	DiscountPercent Uint32_2 = 1
+	DiscountFixed   Uint32_2 = 2
 )
 
 type (
 
 	// ---
-	Uint32 uint32
+	Uint32_2 uint32
 
 	NullUint64 struct {
 		Valid  bool
@@ -49,7 +49,7 @@ type (
 
 	QuoteItemPrice struct {
 		Id                   uint64
-		Type                 Uint32
+		Type                 Uint32_2
 		Value                float64
 		Price                float64
 		FromUnit             float64
@@ -61,12 +61,12 @@ type (
 
 	QuoteItem struct {
 		Id                  uint64
-		Type                Uint32
+		Type                Uint32_2
 		ProductId           uint64
 		Quantity            float64
 		Prices              QuoteItemPricesCollection
-		SetupType           Uint32
-		OriginalType        Uint32
+		SetupType           Uint32_2
+		OriginalType        Uint32_2
 		OriginalName        string
 		OriginalDescription NullString
 		OriginalWeight      float64
@@ -91,7 +91,7 @@ type (
 	Quote struct {
 		QuoteOrderCommon
 		Id            uint64
-		Status        Uint32
+		Status        Uint32_2
 		DisplayName   string
 		Optional      NullString
 		OneTime       time.Time

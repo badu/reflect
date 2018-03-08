@@ -1,10 +1,11 @@
 package reflector
 
 import (
-	"reflect"
 	"sync"
+
+	. "reflect"
 )
 
 func init() {
-	cachedModels = &safeModelsMap{l: new(sync.RWMutex), m: make(map[reflect.Type]*Model)}
+	cachedModels = &safeModelsMap{l: new(sync.RWMutex), m: make(map[Type]*Model)}
 }

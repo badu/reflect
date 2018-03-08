@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
+
+	. "reflect"
 )
 
+//TODO : @badu - benchmark inlining version
 // should remain unused
 func (field *Field) setFlag(value uint8) {
 	field.flags = field.flags | (1 << value)
@@ -51,26 +53,26 @@ func (field *Field) IsInterface() bool {
 	return field.flags&(1<<ff_is_interface) != 0
 }
 
-func (field *Field) ptrToLoad() reflect.Value {
-	return reflect.New(reflect.PtrTo(field.Value.Type()))
+func (field *Field) ptrToLoad() Value {
+	return New(PtrTo(field.Value.Type()))
 }
 
-func (field *Field) IndirectValue(value interface{}) reflect.Value {
-	result := reflect.ValueOf(value)
-	for result.Kind() == reflect.Ptr {
+func (field *Field) IndirectValue(value interface{}) Value {
+	result := ValueOf(value)
+	for result.Kind() == Ptr {
 		result = result.Elem()
 	}
 	return result
 }
 
-func (field *Field) makeSlice() (interface{}, reflect.Value) {
+func (field *Field) makeSlice() (interface{}, Value) {
 	basicType := field.Type
 	if field.IsPointer() {
-		basicType = reflect.PtrTo(field.Type)
+		basicType = PtrTo(field.Type)
 	}
-	sliceType := reflect.SliceOf(basicType)
-	slice := reflect.New(sliceType)
-	slice.Elem().Set(reflect.MakeSlice(sliceType, 0, 0))
+	sliceType := SliceOf(basicType)
+	slice := New(sliceType)
+	slice.Elem().Set(MakeSlice(sliceType, 0, 0))
 	return slice.Interface(), field.IndirectValue(slice.Interface())
 }
 
@@ -89,10 +91,10 @@ func (field *Field) Set(value interface{}) error {
 		return fmt.Errorf("Field not addressable")
 	}
 
-	reflectValue, ok := value.(reflect.Value)
+	reflectValue, ok := value.(Value)
 	if !ok {
 		//couldn't cast - reflecting it
-		reflectValue = reflect.ValueOf(value)
+		reflectValue = ValueOf(value)
 	}
 
 	if reflectValue.IsValid() {
@@ -101,11 +103,11 @@ func (field *Field) Set(value interface{}) error {
 			fieldValue.Set(reflectValue.Convert(fieldValue.Type()))
 		} else {
 			//we're working with a pointer?
-			if fieldValue.Kind() == reflect.Ptr {
+			if fieldValue.Kind() == Ptr {
 				//it's a pointer
 				if fieldValue.IsNil() {
 					//and it's NIL : we have to build it
-					fieldValue.Set(reflect.New(field.Type))
+					fieldValue.Set(New(field.Type))
 				}
 				//we dereference it
 				fieldValue = fieldValue.Elem()

@@ -2,8 +2,9 @@ package reflector
 
 import (
 	"errors"
-	"reflect"
 	"sync"
+
+	. "reflect"
 )
 
 type (
@@ -25,8 +26,8 @@ type (
 	Field struct {
 		flags        uint64 // flags that indicates pointer, struct, slice, etc - see below
 		Name         string
-		Type         reflect.Type
-		Value        reflect.Value
+		Type         Type
+		Value        Value
 		Tags         *Tags
 		Relation     *Model // Relation represents a relation between a Field and a Model
 		printNesting int    // internal for printing tabs
@@ -34,8 +35,8 @@ type (
 
 	// Model
 	Model struct {
-		ModelType    reflect.Type
-		Value        reflect.Value // value is needed to pass over non-initialized structs
+		ModelType    Type
+		Value        Value // value is needed to pass over non-initialized structs
 		Fields       []*Field
 		Methods      map[string]bool // has the method from method lookup
 		printNesting int             // internal, for printing tabs
@@ -51,7 +52,7 @@ type (
 
 	// a safe map of models that Reflector keeps as cached
 	safeModelsMap struct {
-		m map[reflect.Type]*Model
+		m map[Type]*Model
 		l *sync.RWMutex
 	}
 

@@ -2,7 +2,8 @@ package reflector
 
 import (
 	"fmt"
-	"reflect"
+
+	. "reflect"
 )
 
 // Callback is the wrapper for function when sending.
@@ -16,19 +17,19 @@ func panicf(format string, a ...interface{}) {
 	panic(fmt.Errorf(format, a...))
 }
 
-func ensureKind(i interface{}, k reflect.Kind) reflect.Value {
-	v := reflect.ValueOf(i)
+func ensureKind(i interface{}, k Kind) Value {
+	v := ValueOf(i)
 	if v.Kind() != k {
 		panicf("expected %s, got %T", k, i)
 	}
 	return v
 }
 
-func ensureSlice(i interface{}) reflect.Value {
-	return ensureKind(i, reflect.Slice)
+func ensureSlice(i interface{}) Value {
+	return ensureKind(i, Slice)
 }
 
-func ensureCanMap(cv reflect.Value, mv reflect.Value) {
+func ensureCanMap(cv Value, mv Value) {
 	mt := mv.Type()
 	it := mt.In(0)
 	ct := cv.Type().Elem()
@@ -37,7 +38,7 @@ func ensureCanMap(cv reflect.Value, mv reflect.Value) {
 	}
 }
 
-func ensureCanReduce(cv reflect.Value, mv reflect.Value, iv reflect.Value) {
+func ensureCanReduce(cv Value, mv Value, iv Value) {
 	ct := cv.Type().Elem()
 	mt := mv.Type()
 	it := iv.Type()
@@ -58,8 +59,8 @@ func ensureCanReduce(cv reflect.Value, mv reflect.Value, iv reflect.Value) {
 	}
 }
 
-func ensureFunc(i interface{}, in, out int) reflect.Value {
-	v := ensureKind(i, reflect.Func)
+func ensureFunc(i interface{}, in, out int) Value {
+	v := ensureKind(i, Func)
 	t := v.Type()
 
 	if t.NumIn() != in {
@@ -73,7 +74,7 @@ func ensureFunc(i interface{}, in, out int) reflect.Value {
 	return v
 }
 
-func ensureFuncReturns(i interface{}, in, out int, ret reflect.Kind) reflect.Value {
+func ensureFuncReturns(i interface{}, in, out int, ret Kind) Value {
 	v := ensureFunc(i, in, out)
 	rk := v.Type().Out(0).Kind()
 	if rk != ret {

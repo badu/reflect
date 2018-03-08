@@ -2,7 +2,7 @@ package reflector
 
 import (
 	"fmt"
-	"reflect"
+	. "reflect"
 	"time"
 )
 
@@ -33,10 +33,10 @@ func Compare(oldStruct interface{}, newStruct interface{}, onlyFields []string) 
 	}
 
 	//Get values of the structs
-	oldValue, newValue := reflect.ValueOf(oldStruct), reflect.ValueOf(newStruct)
+	oldValue, newValue := ValueOf(oldStruct), ValueOf(newStruct)
 
 	//Handle pointers, if a non-pointer struct is passed in, Indirect will just return the element
-	oldValue, newValue = reflect.Indirect(oldValue), reflect.Indirect(newValue)
+	oldValue, newValue = Indirect(oldValue), Indirect(newValue)
 	if !oldValue.IsValid() || !newValue.IsValid() {
 		return nil, fmt.Errorf("Comparator : Types cannot be nil. SRC (%v) invalid = %v - DEST (%v) invalid %v", oldStruct, oldValue.IsValid(), newStruct, newValue.IsValid())
 	}
@@ -50,7 +50,7 @@ func Compare(oldStruct interface{}, newStruct interface{}, onlyFields []string) 
 	}
 
 	//Verify v1 is a struct, if v1 is a struct then v2 is also a struct because we have already verified the types are equal
-	if oldValue.Kind() != reflect.Struct || newValue.Kind() != reflect.Struct {
+	if oldValue.Kind() != Struct || newValue.Kind() != Struct {
 		return nil, fmt.Errorf("Comparator : Types must both be structs.  Kind1: %v, Kind2 :%v", oldValue.Kind(), newValue.Kind())
 	}
 
@@ -73,33 +73,33 @@ func Compare(oldStruct interface{}, newStruct interface{}, onlyFields []string) 
 		}
 
 		//Handle nil pointers, if a non-pointer field is passed in, Indirect will just return the element
-		oldField, newField = reflect.Indirect(oldField), reflect.Indirect(newField)
+		oldField, newField = Indirect(oldField), Indirect(newField)
 
 		switch valid1, valid2 := oldField.IsValid(), newField.IsValid(); {
 		case valid1 && valid2:
 		//If both are valid, do nothing
 		case valid1:
-			//If only field1 is valid, set field2 to reflect.Zero
-			newField = reflect.Zero(oldField.Type())
+			//If only field1 is valid, set field2 to Zero
+			newField = Zero(oldField.Type())
 		case valid2:
-			//If only field1 is valid, set field2 to reflect.Zero
-			oldField = reflect.Zero(newField.Type())
+			//If only field1 is valid, set field2 to Zero
+			oldField = Zero(newField.Type())
 		default:
 			//Both are invalid so skip loop body
 			continue
 		}
 
-		if oldField.Kind() == reflect.Interface {
+		if oldField.Kind() == Interface {
 			return nil, fmt.Errorf("Update Compare : Type of field cannot be interface. field1: %v, field2: %v", oldField, newField)
 		}
 
-		var oldSubField, newSubField reflect.Value
-		var subStructType reflect.Type
+		var oldSubField, newSubField Value
+		var subStructType Type
 
 		// if we have embedded struct, we might need to check for the property with the same name inside
-		isStruct := fieldKind == reflect.Struct
+		isStruct := fieldKind == Struct
 		if isStruct {
-			oldSubField, newSubField = reflect.ValueOf(oldField.Interface()), reflect.ValueOf(newField.Interface())
+			oldSubField, newSubField = ValueOf(oldField.Interface()), ValueOf(newField.Interface())
 			subStructType = oldSubField.Type()
 		}
 
@@ -138,18 +138,18 @@ func Compare(oldStruct interface{}, newStruct interface{}, onlyFields []string) 
 		}
 
 		// convention - comparing slices by Id field
-		if fieldKind == reflect.Slice {
+		if fieldKind == Slice {
 			// what's in old and no more in new (was deleted)
 			for index1 := 0; index1 < oldField.Len(); index1++ {
 				oldElem := oldField.Index(index1)
-				if oldElem.Kind() == reflect.Ptr {
+				if oldElem.Kind() == Ptr {
 					oldElem = oldElem.Elem()
 				}
 				foundInOld := false
 				oldElemId := oldElem.FieldByName("Id").Interface()
 				for index2 := 0; index2 < newField.Len(); index2++ {
 					newElem := newField.Index(index2)
-					if newElem.Kind() == reflect.Ptr {
+					if newElem.Kind() == Ptr {
 						newElem = newElem.Elem()
 					}
 					if newElem.FieldByName("Id").Interface() == oldElemId {
@@ -170,14 +170,14 @@ func Compare(oldStruct interface{}, newStruct interface{}, onlyFields []string) 
 			// what's in new and not in old (was added)
 			for index2 := 0; index2 < newField.Len(); index2++ {
 				newElem := newField.Index(index2)
-				if newElem.Kind() == reflect.Ptr {
+				if newElem.Kind() == Ptr {
 					newElem = newElem.Elem()
 				}
 				foundInNew := false
 				newElemId := newElem.FieldByName("Id").Interface()
 				for index1 := 0; index1 < oldField.Len(); index1++ {
 					oldElem := oldField.Index(index1)
-					if oldElem.Kind() == reflect.Ptr {
+					if oldElem.Kind() == Ptr {
 						oldElem = oldElem.Elem()
 					}
 					if newElemId == oldElem.FieldByName("Id").Interface() {
