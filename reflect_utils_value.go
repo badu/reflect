@@ -27,44 +27,44 @@ func internalNew(t *RType) Value {
 // makeInt returns a Value of type t equal to bits (possibly truncated),
 // where t is a signed or unsigned int type.
 func makeInt(f Flag, bits uint64, t *RType) Value {
-	ptr := unsafeNew(t)
+	newPtr := unsafeNew(t)
 	switch t.size {
 	case 1:
-		*(*uint8)(ptr) = uint8(bits)
+		*(*uint8)(newPtr) = uint8(bits)
 	case 2:
-		*(*uint16)(ptr) = uint16(bits)
+		*(*uint16)(newPtr) = uint16(bits)
 	case 4:
-		*(*uint32)(ptr) = uint32(bits)
+		*(*uint32)(newPtr) = uint32(bits)
 	case 8:
-		*(*uint64)(ptr) = bits
+		*(*uint64)(newPtr) = bits
 	}
-	return Value{Type: t, Ptr: ptr, Flag: f | pointerFlag | Flag(t.Kind())}
+	return Value{Type: t, Ptr: newPtr, Flag: f | pointerFlag | Flag(t.Kind())}
 }
 
 // makeFloat returns a Value of type t equal to v (possibly truncated to float32),
 // where t is a float32 or float64 type.
 func makeFloat(f Flag, v float64, t *RType) Value {
-	ptr := unsafeNew(t)
+	newPtr := unsafeNew(t)
 	switch t.size {
 	case 4:
-		*(*float32)(ptr) = float32(v)
+		*(*float32)(newPtr) = float32(v)
 	case 8:
-		*(*float64)(ptr) = v
+		*(*float64)(newPtr) = v
 	}
-	return Value{Type: t, Ptr: ptr, Flag: f | pointerFlag | Flag(t.Kind())}
+	return Value{Type: t, Ptr: newPtr, Flag: f | pointerFlag | Flag(t.Kind())}
 }
 
 // makeComplex returns a Value of type t equal to v (possibly truncated to complex64),
 // where t is a complex64 or complex128 type.
 func makeComplex(f Flag, v complex128, t *RType) Value {
-	ptr := unsafeNew(t)
+	newPtr := unsafeNew(t)
 	switch t.size {
 	case 8:
-		*(*complex64)(ptr) = complex64(v)
+		*(*complex64)(newPtr) = complex64(v)
 	case 16:
-		*(*complex128)(ptr) = v
+		*(*complex128)(newPtr) = v
 	}
-	return Value{Type: t, Ptr: ptr, Flag: f | pointerFlag | Flag(t.Kind())}
+	return Value{Type: t, Ptr: newPtr, Flag: f | pointerFlag | Flag(t.Kind())}
 }
 
 func makeString(f Flag, s string, t *RType) Value {
@@ -276,7 +276,7 @@ func needKeyUpdate(t *RType) bool {
 	}
 }
 
-func (v Value) assertE2I(dst *RType, target ptr) {
+func assertE2I(v Value, dst *RType, target ptr) {
 	// TODO : @badu - Type links to methods
 	//to be read "if NumMethod(dst) == 0{"
 	if (dst.Kind() == Interface && dst.NoOfIfaceMethods() == 0) || (dst.Kind() != Interface && lenExportedMethods(dst) == 0) {
@@ -287,42 +287,24 @@ func (v Value) assertE2I(dst *RType, target ptr) {
 	}
 }
 
-// convert operation: string -> []byte
-func (v Value) cvtStringBytes(t *RType) Value {
-	strVal := v.String()
-	if strVal.Debug != "" {
-		panic("reflect.x.error : cvtStringBytes = " + strVal.Debug)
-	}
-	return makeBytes(v.ro(), []byte(strVal.Get()), t)
-}
-
-// convert operation: string -> []rune
-func (v Value) cvtStringRunes(t *RType) Value {
-	strVal := v.String()
-	if strVal.Debug != "" {
-		panic("reflect.x.error : cvtStringRunes = " + strVal.Debug)
-	}
-	return makeRunes(v.ro(), []rune(strVal.Get()), t)
-}
-
 // convert operation: direct copy
 func cvtDirect(v Value, typ *RType) Value {
 	f := v.Flag
-	ptr := v.Ptr
+	valPtr := v.Ptr
 	if v.CanAddr() {
 		// indirect, mutable word - make a copy
 		c := unsafeNew(typ)
-		typedmemmove(typ, c, ptr)
-		ptr = c
+		typedmemmove(typ, c, valPtr)
+		valPtr = c
 		f &^= addressableFlag
 	}
-	return Value{Type: typ, Ptr: ptr, Flag: v.ro() | f}
+	return Value{Type: typ, Ptr: valPtr, Flag: v.ro() | f}
 }
 
 // convert operation: concrete -> interface
 func cvtT2I(v Value, typ *RType) Value {
 	target := unsafeNew(typ)
-	v.assertE2I(typ, target)
+	assertE2I(v, typ, target)
 	return Value{Type: typ, Ptr: target, Flag: v.ro() | pointerFlag | Flag(Interface)}
 }
 

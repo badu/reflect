@@ -53,7 +53,7 @@ func (v Value) assignTo(dst *RType, target ptr) Value {
 			// Avoid the panic by returning a nil dst (e.g., Reader) explicitly.
 			return Value{Type: dst, Ptr: nil, Flag: Flag(Interface)}
 		}
-		v.assertE2I(dst, target)
+		assertE2I(v, dst, target)
 		return Value{Type: dst, Ptr: target, Flag: pointerFlag | Flag(Interface)}
 	}
 }
@@ -88,13 +88,13 @@ func (v Value) packEface() interface{} {
 			panic("reflect.x.error : packEface this is not a pointer")
 		}
 		// Value is indirect, and so is the interface we're making.
-		ptr := v.Ptr
+		valPtr := v.Ptr
 		if v.CanAddr() {
 			c := unsafeNew(v.Type)
-			typedmemmove(v.Type, c, ptr)
-			ptr = c
+			typedmemmove(v.Type, c, valPtr)
+			valPtr = c
 		}
-		e.word = ptr
+		e.word = valPtr
 	case v.isPointer():
 		// Value is indirect, but interface is direct. We need to load the data at v.ptr into the interface data word.
 		e.word = convPtr(v.Ptr)

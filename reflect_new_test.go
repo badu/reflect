@@ -10,125 +10,8 @@ import (
 	"fmt"
 	. "github.com/badu/reflect"
 	"testing"
-	"time"
 	"unsafe"
 )
-
-type (
-	Function struct {
-		Caller caller
-	}
-
-	caller interface {
-		Call(args ...interface{}) error
-	}
-
-	callback func(args ...interface{}) error
-
-	NullString struct {
-		String string `json:"openedOn" sql:"type:TEXT NULL"`
-		Valid  bool   `json:"-" sql:"-"`
-	}
-
-	Entity struct {
-		Id        uint64    `sql:"AUTO_INCREMENT" orm:"primary_key" json:"id"`
-		CreatedAt time.Time `json:"createdAt" sql:"DEFAULT:current_timestamp;NOT NULL"`
-		UpdatedAt time.Time `json:"updatedAt" sql:"type:TIMESTAMP NULL"`
-		DeletedAt time.Time `json:"deletedAt" sql:"type:TIMESTAMP NULL"`
-		Persist   Function
-		Delete    Function
-		anonField bool
-	}
-
-	Address struct {
-		Entity
-		Street NullString `json:"street"`
-	}
-
-	User struct {
-		Entity
-		FirstName NullString `json:"firstName"`
-		LastName  NullString `json:"lastName"`
-		Username  string     `json:"username" sql:"VARCHAR(55);NOT NULL" valid:"required~Name is required,length(3|50)~Username is too short"`
-	}
-
-	Customer struct {
-		Entity
-		Name      string     `json:"name" valid:"required~Name is required,length(3|50)~Name is too short"`
-		Addresses []*Address `json:"addresses"`
-		Users     []*User    `json:"users"`
-	}
-
-	Price struct {
-		Entity
-		Type  int     `valid:"required~Type is required" json:"type"`
-		Value float64 `valid:"required~Type is required" json:"value"`
-	}
-
-	PricesCollection []*Price
-
-	Item struct {
-		Entity
-		Name   string           `json:"name" valid:"required~Name is required,length(3|50)~Name is too short"`
-		Prices PricesCollection `json:"prices"`
-	}
-
-	Invoice struct {
-		Entity
-		Customer         *Customer `json:"customer"`
-		Items            []*Item   `json:"items"`
-		DueDate          time.Time `json:"dueDate" sql:"type:TIMESTAMP NULL"`
-		PreviousInvoices []*Invoice
-		priv             bool
-		Name             string
-	}
-
-	InvoiceInterface interface {
-		Print()
-	}
-
-	Principal struct {
-		Entity   //embedded Persist and Delete
-		Id       int
-		Username string
-	}
-)
-
-// a method for white list lookup
-func (i Invoice) Print() {}
-func (e *Entity) Print() {}
-
-func (e Entity) SendMan() {
-	println("Different Send...")
-}
-
-func (e *Entity) Inherited(newName string) string {
-	println("Entity Send called : " + newName)
-	return newName
-}
-
-func (i *Invoice) SetCustomer(customer *Customer) error {
-	i.Customer = customer
-	return nil
-}
-
-// a method for white list lookup
-func (i *Invoice) Send(newName string) string {
-	i.Name = newName
-	println("Invoice Send called : " + newName)
-	return i.Name
-}
-
-// Stringer implementation
-func (i Invoice) String() string { return "Invoice Stringer" }
-
-func (i Item) Print() {}
-
-func (i Item) String() string { return "Item Stringer" }
-
-func (p Price) Print() {}
-
-func (p Price) String() string { return "Price Stringer" }
 
 // Call the received function.
 func (f Function) Call(args ...interface{}) error {
@@ -287,4 +170,46 @@ func TestCaller(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error Deleting : %v", err)
 	}
+}
+
+func TestExplainRelation(t *testing.T) {
+	type MyByte byte
+	type MyRune rune
+
+	var myrs []MyRune
+	var mybs []MyByte
+	var str = "abc"
+
+	typMyRuneSlice := TypeOf(myrs)
+	typMyBytesSlice := TypeOf(mybs)
+	typString := TypeOf(str)
+
+	t.Logf("Rune convertible to string : %t", typMyRuneSlice.ConvertibleTo(typString))    // false
+	t.Logf("String convertible to rune : %t", typString.ConvertibleTo(typMyRuneSlice))    // false
+	t.Logf("[]byte convertible to string : %t", typMyBytesSlice.ConvertibleTo(typString)) // false
+	t.Logf("String convertible to []byte : %t", typString.ConvertibleTo(typMyBytesSlice)) // false
+	/**
+	From https://github.com/go101/go101/wiki/Some-Details-About-Byte-Slices-And-Rune-Slices-In-Go
+	Quoted:
+
+	So I looks both the implementations of gc and gccgo violate the restrictions of Go type system, with gccgo violates more than gc.
+	Though, personally, I don't think the violations are harmful.
+	I hope gc can violate more as gccgo, so that the violations can be viewed as unintended semantics sugars.
+	In fact, the reflect package also violates some restrictions of Go type system.
+	Go type system forbids us converting a []MyByte value to []byte, but with the help of the method Bytes() of reflect.Value, such conversions are possible.
+	*/
+	h := []byte("Hello")
+	hc := append(h, " C"...)
+	_ = append(h, " Go"...)
+	t.Logf("Cap = %d, Len = %d, Result = %s\n", cap(h), len(h), hc)
+	/**
+		What! What happens here? The reason is gccgo and gc use different memory allocation policies when allocating the memory block for hosting the elements of the result slice of []byte("Hello"). Both implementations don't violate Go specification and other official Go documentations. In other words, the capacity of the result slice of []byte("Hello") is compiler dependent.
+	Fix below :
+	*/
+
+	h2 := []byte("Hello")
+	h2 = h2[:len(h2):len(h2)] // need this line
+	hc2 := append(h2, " C"...)
+	_ = append(h2, " Go"...)
+	t.Logf("Cap = %d, Len = %d, Result = %s\n", cap(h2), len(h2), hc2)
 }

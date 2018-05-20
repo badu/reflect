@@ -225,8 +225,8 @@ func (v StructValue) Field(i int) Value {
 	// Either pointerFlag is set and v.ptr points at struct, or pointerFlag is not set and v.ptr is the actual struct data.
 	// In the former case, we want v.ptr + offset.
 	// In the latter case, we must have field.offset = 0, so v.ptr + field.offset is still the correct address.
-	ptr := add(v.Ptr, structFieldOffset(field))
-	return Value{Type: typ, Ptr: ptr, Flag: fl}
+	fieldPtr := add(v.Ptr, structFieldOffset(field))
+	return Value{Type: typ, Ptr: fieldPtr, Flag: fl}
 }
 
 // FieldByIndex returns the nested field corresponding to index.

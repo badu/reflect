@@ -97,7 +97,7 @@ func (p Price) Print() {}
 func (p Price) String() string { return "Price Stringer" }
 
 // Test scan invoice
-func TestInvoice(t *testing.T) {
+func _TestInvoice(t *testing.T) {
 	r := &Reflector{}
 	r.MethodsLookup = []string{"Print", "Send", "String"}
 	err := r.ComponentsScan(Invoice{})
@@ -109,7 +109,7 @@ func TestInvoice(t *testing.T) {
 }
 
 // Test calling ourselves from a struct
-func TestCaller(t *testing.T) {
+func _TestCaller(t *testing.T) {
 
 	// let's say principal is built inside another package and returned to where it's needed
 	principal := &Principal{

@@ -447,14 +447,7 @@ func (t *RType) convertible(dst *RType) bool {
 		return true
 	}
 
-	if t.implements(dst) {
-		if srcKind == Interface {
-			return true
-		}
-		return true
-	}
-
-	return false
+	return t.implements(dst)
 }
 
 func (t *RType) Comparable() bool {

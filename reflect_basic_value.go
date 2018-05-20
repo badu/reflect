@@ -52,7 +52,7 @@ func (v UintValue) Set(value uint64) bool {
 		case Uint32:
 			*(*uint32)(v.ptr) = uint32(value)
 		case Uint64:
-			*(*uint64)(v.ptr) = uint64(value)
+			*(*uint64)(v.ptr) = value
 		case UintPtr:
 			*(*uintptr)(v.ptr) = uintptr(value)
 		default:

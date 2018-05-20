@@ -19,8 +19,8 @@ func New(typ *RType) Value {
 			panic("reflect: New(nil)")
 		}
 	}
-	ptr := unsafeNew(typ)
-	return Value{Type: typ.PtrTo(), Ptr: ptr, Flag: Flag(Ptr)}
+	newPtr := unsafeNew(typ)
+	return Value{Type: typ.PtrTo(), Ptr: newPtr, Flag: Flag(Ptr)}
 }
 
 // Constr returns a Value representing a new zero value for the specified type. No pointers.
@@ -532,7 +532,7 @@ func TagLookup(tag string, key string) (string, bool) {
 		if i == 0 || i+1 >= len(tag) || tag[i] != ':' || tag[i+1] != '"' {
 			break
 		}
-		name := string(tag[:i])
+		name := tag[:i]
 		tag = tag[i+1:]
 
 		// Scan quoted string to find value.
@@ -546,7 +546,7 @@ func TagLookup(tag string, key string) (string, bool) {
 		if i >= len(tag) {
 			break
 		}
-		qvalue := string(tag[:i+1])
+		qvalue := tag[:i+1]
 		tag = tag[i+1:]
 
 		if key == name {
