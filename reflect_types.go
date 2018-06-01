@@ -537,7 +537,10 @@ type З struct{}
 
 func (d З) З() {}
 
-// fool the dead code removal that it has seen reflect, so it don't skip the method type filling (method types are zero otherwise)
+// fool linker that it has seen reflect, so it don't skip the method type filling (method types are zero otherwise)
+// see cmd\compile\internal\gc\syntax.go -> funcReflectMethod
+// see cmd\internal\obj\link.go -> AttrReflectMethod
+// also `usemethod` in cmd\compile\internal\gc\walk.go function, which checks interface method calls for uses of reflect.Type.Method.
 var _ = systemReflect.TypeOf(З{}).Method(0)
 
 func init() {
