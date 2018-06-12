@@ -450,6 +450,18 @@ type (
 		rcvrVal   Value
 	}
 
+	// makeFuncImpl is the closure value implementing the function
+	// returned by MakeFunc.
+	// The first two words of this type must be kept in sync with
+	// methodValue and runtime.reflectMethodValue.
+	// Any changes should be reflected in all three.
+	makeFuncImpl struct {
+		code  uintptr
+		stack *bitVector
+		typ   *funcType
+		fn    func([]Value) []Value
+	}
+
 	// Value is the reflection interface to a Go value.
 	//
 	// Not all methods apply to all kinds of values. Restrictions,

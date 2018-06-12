@@ -9,6 +9,18 @@
 
 #define	REGCTXT	R22
 
+// makeFuncStub is the code half of the function returned by MakeFunc.
+// See the comment on the declaration of makeFuncStub in makefunc.go
+// for more details.
+// No arg size here, runtime pulls arg map out of the func value.
+TEXT ·makeFuncStub(SB),(NOSPLIT|WRAPPER),$8
+	NO_LOCAL_POINTERS
+	MOVW	REGCTXT, 4(R29)
+	MOVW	$argframe+0(FP), R1
+	MOVW	R1, 8(R29)
+	JAL	·callReflect(SB)
+	RET
+
 // methodValueCall is the code half of the function returned by makeMethodValue.
 // See the comment on the declaration of methodValueCall in makefunc.go
 // for more details.

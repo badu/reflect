@@ -130,3 +130,10 @@ func mapiternext(it unsafe.Pointer)
 //go:noescape
 //go:linkname maplen reflect.maplen
 func maplen(m unsafe.Pointer) int
+
+// makeFuncStub is an assembly function that is the code half of
+// the function returned from MakeFunc. It expects a *callReflectFunc
+// as its context register, and its job is to invoke callReflect(ctxt, frame)
+// where ctxt is the context register and frame is a pointer to the first
+// word in the passed-in argument frame.
+func makeFuncStub()

@@ -8,6 +8,7 @@ package reflect
 
 import (
 	"runtime"
+	"unsafe"
 )
 
 // arrayAt returns the i-th element of p,  an array whose elements are eltSize bytes wide.
@@ -368,4 +369,96 @@ func callMethod(ctx *methodValue, framePtr ptr) {
 
 	// Without the KeepAlive call, the finalizer could run at the start of syscall.Read, closing the file descriptor before syscall.Read makes the actual system call.
 	runtime.KeepAlive(ctx)
+}
+
+// callReflect is the call implementation used by a function
+// returned by MakeFunc. In many ways it is the opposite of the
+// method Value.call above. The method above converts a call using Values
+// into a call of a function with a concrete argument frame, while
+// callReflect converts a call of a function with a concrete argument
+// frame into a call using Values.
+// It is in this file so that it can be next to the call method above.
+// The remainder of the MakeFunc implementation is in makefunc.go.
+//
+// NOTE: This function must be marked as a "wrapper" in the generated code,
+// so that the linker can make it work correctly for panic and recover.
+// The gc compilers know to do that for the name "reflect.callReflect".
+func callReflect(ctxt *makeFuncImpl, frame unsafe.Pointer) {
+	ftyp := ctxt.typ
+	f := ctxt.fn
+
+	// Copy argument frame into Values.
+	ptr := frame
+	off := uintptr(0)
+	in := make([]Value, 0, int(ftyp.InLen))
+	for _, typ := range inParams(ftyp) {
+		off += -off & uintptr(typ.align-1)
+		v := Value{typ, nil, Flag(typ.Kind())}
+		if typ.isDirectIface() {
+			// value cannot be inlined in interface data.
+			// Must make a copy, because f might keep a reference to it,
+			// and we cannot let f keep a reference to the stack frame
+			// after this function returns, not even a read-only reference.
+			v.Ptr = unsafeNew(typ)
+			if typ.size > 0 {
+				typedmemmove(typ, v.Ptr, add(ptr, off))
+			}
+			v.Flag |= pointerFlag
+		} else {
+			v.Ptr = *(*unsafe.Pointer)(add(ptr, off))
+		}
+		in = append(in, v)
+		off += typ.size
+	}
+
+	// Call underlying function.
+	out := f(in)
+	numOut := ftyp.OutLen
+	if len(out) != int(numOut) {
+		panic("reflect: wrong return count from function created by MakeFunc. Are you using variadic functions?")
+
+	}
+
+	// Copy results back into argument frame.
+	if numOut > 0 {
+		off += -off & (PtrSize - 1)
+		if IsAMD64p32 {
+			off = align(off, 8)
+		}
+		for i, typ := range outParams(ftyp) {
+			v := out[i]
+			if v.Type != typ {
+				panic("reflect: function created by MakeFunc using " + funcName(f) + " returned wrong type: have " + out[i].Type.String() + " for " + typ.String())
+			}
+			if v.Flag&exportFlag != 0 {
+				panic("reflect: function created by MakeFunc using " + funcName(f) + " returned value obtained from unexported field")
+			}
+			off += -off & uintptr(typ.align-1)
+			if typ.size == 0 {
+				continue
+			}
+			addr := add(ptr, off)
+			if v.Flag&pointerFlag != 0 {
+				typedmemmove(typ, addr, v.Ptr)
+			} else {
+				*(*unsafe.Pointer)(addr) = v.Ptr
+			}
+			off += typ.size
+		}
+	}
+
+	// runtime.getArgInfo expects to be able to find ctxt on the
+	// stack when it finds our caller, makeFuncStub. Make sure it
+	// doesn't get garbage collected.
+	runtime.KeepAlive(ctxt)
+}
+
+// funcName returns the name of f, for use in error messages.
+func funcName(f func([]Value) []Value) string {
+	pc := *(*uintptr)(unsafe.Pointer(&f))
+	rf := runtime.FuncForPC(pc)
+	if rf != nil {
+		return rf.Name()
+	}
+	return "closure"
 }

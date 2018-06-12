@@ -9,6 +9,7 @@ package reflect
 import (
 	"strconv"
 	"unicode/utf8"
+	"unsafe"
 )
 
 // New returns a Value representing a pointer to a new zero value
@@ -1158,4 +1159,47 @@ func Atoi32(src string) (int32, bool) {
 		return int32(n), ok
 	}
 	return 0, false
+}
+
+// MakeFunc returns a new function of the given Type
+// that wraps the function fn. When called, that new function
+// does the following:
+//
+//	- converts its arguments to a slice of Values.
+//	- runs results := fn(args).
+//	- returns the results as a slice of Values, one per formal result.
+//
+// The implementation fn can assume that the argument Value slice
+// has the number and type of arguments given by typ.
+// If typ describes a variadic function, the final Value is itself
+// a slice representing the variadic arguments, as in the
+// body of a variadic function. The result Value slice returned by fn
+// must have the number and type of results given by typ.
+//
+// The Value.Call method allows the caller to invoke a typed function
+// in terms of Values; in contrast, MakeFunc allows the caller to implement
+// a typed function in terms of Values.
+//
+// The Examples section of the documentation includes an illustration
+// of how to use MakeFunc to build a swap function for different types.
+//
+func MakeFunc(typ *RType, fn func(args []Value) (results []Value)) Value {
+	if typ.Kind() != Func {
+		panic("reflect: call of MakeFunc with non-Func type")
+	}
+
+	ftyp := (*funcType)(unsafe.Pointer(typ))
+
+	// Indirect Go func value (dummy) to obtain
+	// actual code address. (A Go func value is a pointer
+	// to a C function pointer. https://golang.org/s/go11func.)
+	dummy := makeFuncStub
+	code := **(**uintptr)(unsafe.Pointer(&dummy))
+
+	// makeFuncImpl contains a stack map for use by the runtime
+	_, _, _, stack := funcLayout(typ, nil)
+
+	impl := &makeFuncImpl{code: code, stack: stack, typ: ftyp, fn: fn}
+
+	return Value{typ, unsafe.Pointer(impl), Flag(Func)}
 }

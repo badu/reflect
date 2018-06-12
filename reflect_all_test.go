@@ -4591,3 +4591,46 @@ func TestNewVsConstr(t *testing.T) {
 	constr.String().Set("Direct")
 	// t.Logf("Test set string %q %q", constr.String().Get(), out.Get())
 }
+
+func TestMakeFunc(t *testing.T) {
+	f := dummy
+	fv := MakeFunc(TypeOf(f), func(in []Value) []Value { return in })
+	ReflectOn(&f).Deref().Set(fv)
+
+	// Call g with small arguments so that there is
+	// something predictable (and different from the
+	// correct results) in those positions on the stack.
+	g := dummy
+	g(1, 2, 3, two{4, 5}, 6, 7, 8)
+
+	// Call constructed function f.
+	i, j, k, l, m, n, o := f(10, 20, 30, two{40, 50}, 60, 70, 80)
+	if i != 10 || j != 20 || k != 30 || l != (two{40, 50}) || m != 60 || n != 70 || o != 80 {
+		t.Errorf("Call returned %d, %d, %d, %v, %d, %g, %d; want 10, 20, 30, [40, 50], 60, 70, 80", i, j, k, l, m, n, o)
+	}
+}
+
+func TestMakeFuncInterface(t *testing.T) {
+	fn := func(i int) int {
+		return i
+	}
+	incr := func(in []Value) []Value {
+		//t.Logf("Called with %#v", in)
+		return []Value{ReflectOn(int(in[0].Int().Get() + 1))}
+	}
+	fv := MakeFunc(TypeOf(fn), incr)
+	ReflectOn(&fn).Deref().Set(fv)
+	if r := fn(2); r != 3 {
+		t.Errorf("Call returned %d, want 3", r)
+	}
+	result, ok := fv.Call([]Value{ReflectOn(14)})
+	if !ok {
+		t.Fatalf("Call failed.")
+	}
+	if r := result[0].Int().Get(); r != 15 {
+		t.Errorf("Call returned %d, want 15", r)
+	}
+	if r := fv.Interface().(func(int) int)(26); r != 27 {
+		t.Errorf("Call returned %d, want 27", r)
+	}
+}
