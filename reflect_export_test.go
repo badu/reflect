@@ -7,12 +7,95 @@
 package reflect
 
 import (
+	"strconv"
 	"unsafe"
 )
 
+// valueToString returns a textual representation of the reflection value val.
+// For debugging only.
+func ValueToString(v Value) string {
+	var str string
+
+	if !v.IsValid() {
+		return "<zero Value>"
+	}
+	switch v.Kind() {
+	case Int, Int8, Int16, Int32, Int64:
+		return strconv.FormatInt(v.Int().Get(), 10)
+	case Uint, Uint8, Uint16, Uint32, Uint64, UintPtr:
+		return strconv.FormatUint(v.Uint().Get(), 10)
+	case Float32, Float64:
+		return strconv.FormatFloat(v.Float().Get(), 'g', -1, 64)
+	case Complex64, Complex128:
+		c := v.Complex().Get()
+		return strconv.FormatFloat(real(c), 'g', -1, 64) + "+" + strconv.FormatFloat(imag(c), 'g', -1, 64) + "i"
+	case String:
+		strVal := v.String()
+		if strVal.Debug != "" {
+			return strVal.Debug
+		}
+		return strVal.Get()
+	case Bool:
+		if v.Bool().Get() {
+			return "true"
+		} else {
+			return "false"
+		}
+	case Ptr:
+		str = TypeToString(v.Type) + "("
+		if v.IsNil() {
+			str += "0"
+		} else {
+			str += "&" + ValueToString(v.Deref())
+		}
+		str += ")"
+		return str
+	case Array, Slice:
+		str += TypeToString(v.Type)
+		str += "{"
+		slice := ToSlice(v)
+		for i := 0; i < slice.Len(); i++ {
+			if i > 0 {
+				str += ", "
+			}
+			str += ValueToString(slice.Index(i))
+		}
+		str += "}"
+		return str
+	case Map:
+		str = TypeToString(v.Type)
+		str += "{"
+		str += "<can't iterate on maps>"
+		str += "}"
+		return str
+	case Struct:
+		vx := StructValue{Value: v}
+		numFields := len(v.Type.convToStruct().fields)
+		str += TypeToString(v.Type)
+		str += "{"
+		for i, n := 0, numFields; i < n; i++ {
+			if i > 0 {
+				str += ", "
+			}
+			str += ValueToString(vx.Field(i))
+		}
+		str += "}"
+		return str
+	case Interface:
+		return TypeToString(v.Type) + "(" + ValueToString(v.Iface()) + ")"
+	case Func:
+		return TypeToString(v.Type) + "(" + strconv.FormatUint(uint64(v.Pointer()), 10) + ")"
+	case Chan:
+		str = TypeToString(v.Type)
+		return str
+	default:
+		return "ValueToString ERROR : can't print type " + TypeToString(v.Type)
+	}
+}
+
 // NewAt returns a Value representing a pointer to a value of the
 // specified type, using p as that pointer.
-func NewAt(typ *RType, p ptr) Value {
+func NewAt(typ *RType, p unsafe.Pointer) Value {
 	return Value{Type: typ.PtrTo(), Ptr: p, Flag: Flag(Ptr)}
 }
 

@@ -83,6 +83,7 @@ func ifaceE2I(t *RType, src interface{}, dst unsafe.Pointer)
 // as its context register, and its job is to invoke callMethod(ctxt, frame)
 // where ctxt is the context register and frame is a pointer to the first
 // word in the passed-in argument frame.
+//go:linkname methodValueCall reflect.methodValueCall
 func methodValueCall()
 
 // call calls fn with a copy of the n argument bytes pointed at by arg.
@@ -136,4 +137,5 @@ func maplen(m unsafe.Pointer) int
 // as its context register, and its job is to invoke callReflect(ctxt, frame)
 // where ctxt is the context register and frame is a pointer to the first
 // word in the passed-in argument frame.
+//go:linkname makeFuncStub reflect.makeFuncStub
 func makeFuncStub()

@@ -6,6 +6,8 @@
 
 package reflect
 
+import "unsafe"
+
 // Index returns v's i'th element.
 func (v SliceValue) Index(i int) Value {
 	switch v.Kind() {
@@ -200,7 +202,7 @@ func (v SliceValue) Slice(i, j int) SliceValue {
 	var (
 		cap   int
 		slice *sliceType
-		base  ptr
+		base  unsafe.Pointer
 	)
 	switch v.Kind() {
 	case Array:
@@ -231,7 +233,7 @@ func (v SliceValue) Slice(i, j int) SliceValue {
 		if i < header.Len {
 			finalHeader = stringHeader{arrayAt(header.Data, i, 1), j - i}
 		}
-		return SliceValue{Value: Value{Type: v.Type, Ptr: ptr(&finalHeader), Flag: v.Flag}}
+		return SliceValue{Value: Value{Type: v.Type, Ptr: unsafe.Pointer(&finalHeader), Flag: v.Flag}}
 	default:
 		// kind checks are performed in public ToSlice(), so this should NEVER happen
 		if willPrintDebug {
@@ -248,10 +250,10 @@ func (v SliceValue) Slice(i, j int) SliceValue {
 	}
 
 	// Declare slice so that gc can see the base pointer in it.
-	var slicePtrs []ptr
+	var slicePtrs []unsafe.Pointer
 
 	// Reinterpret as *sliceHeader to edit.
-	header := (*sliceHeader)(ptr(&slicePtrs))
+	header := (*sliceHeader)(unsafe.Pointer(&slicePtrs))
 	header.Len = j - i
 	header.Cap = cap - i
 	if cap-i > 0 {
@@ -262,7 +264,7 @@ func (v SliceValue) Slice(i, j int) SliceValue {
 	}
 	// make a flag to mark a pointer to a slice
 	fl := v.ro() | pointerFlag | Flag(Slice)
-	return SliceValue{Value: Value{Type: &slice.RType, Ptr: ptr(&slicePtrs), Flag: fl}}
+	return SliceValue{Value: Value{Type: &slice.RType, Ptr: unsafe.Pointer(&slicePtrs), Flag: fl}}
 }
 
 // Slice3 is the 3-index form of the slice operation: it returns v[i:j:k].
@@ -270,7 +272,7 @@ func (v SliceValue) Slice3(i, j, k int) SliceValue {
 	var (
 		cap   int
 		slice *sliceType
-		base  ptr
+		base  unsafe.Pointer
 	)
 	switch v.Kind() {
 	case Array:
@@ -302,7 +304,7 @@ func (v SliceValue) Slice3(i, j, k int) SliceValue {
 		if i < header.Len {
 			finalHeader = stringHeader{arrayAt(header.Data, i, 1), j - i}
 		}
-		return SliceValue{Value: Value{Type: v.Type, Ptr: ptr(&finalHeader), Flag: v.Flag}}
+		return SliceValue{Value: Value{Type: v.Type, Ptr: unsafe.Pointer(&finalHeader), Flag: v.Flag}}
 	default:
 		// kind checks are performed in public ToSlice(), so this should NEVER happen
 		if willPrintDebug {
@@ -319,10 +321,10 @@ func (v SliceValue) Slice3(i, j, k int) SliceValue {
 	}
 
 	// Declare slice so that the garbage collector can see the base pointer in it.
-	var slicePtrs []ptr
+	var slicePtrs []unsafe.Pointer
 
 	// Reinterpret as *sliceHeader to edit.
-	header := (*sliceHeader)(ptr(&slicePtrs))
+	header := (*sliceHeader)(unsafe.Pointer(&slicePtrs))
 	header.Len = j - i
 	header.Cap = k - i
 	if k-i > 0 {
@@ -333,7 +335,7 @@ func (v SliceValue) Slice3(i, j, k int) SliceValue {
 	}
 	// make a flag to mark a pointer to a slice
 	fl := v.ro() | pointerFlag | Flag(Slice)
-	return SliceValue{Value: Value{Type: &slice.RType, Ptr: ptr(&slicePtrs), Flag: fl}}
+	return SliceValue{Value: Value{Type: &slice.RType, Ptr: unsafe.Pointer(&slicePtrs), Flag: fl}}
 }
 
 // AppendSlice appends a slice t to a slice s and returns the resulting slice.

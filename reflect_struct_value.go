@@ -8,7 +8,6 @@ package reflect
 
 import (
 	"bytes"
-	"strconv"
 )
 
 func (v StructValue) Methods(inspect MethodInspectFn) {
@@ -91,7 +90,7 @@ func (v StructValue) Method(index int) Value {
 				return Value{Type: v.Type, Ptr: v.Ptr, Flag: fl}
 			}
 		}
-		panic("reflect.StructValue.Method: " + strconv.Itoa(index) + " method not found")
+		panic("reflect.StructValue.Method: " + I2A(index, -1) + " method not found")
 	} else {
 		if uint(index) >= uint(lenExportedMethods(v.Type)) {
 			if willPrintDebug {

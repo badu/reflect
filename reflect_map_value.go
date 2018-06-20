@@ -6,6 +6,8 @@
 
 package reflect
 
+import "unsafe"
+
 // Len returns v's length.
 func (v MapValue) Len() int {
 	return maplen(v.pointer())
@@ -20,11 +22,11 @@ func (v MapValue) MapIndex(key Value) Value {
 	// This is consistent with the behavior for structs, which allow read but not write of unexported fields.
 	key = key.assignTo(mapType.KeyType, nil)
 
-	var keyPtr ptr
+	var keyPtr unsafe.Pointer
 	if key.isPointer() {
 		keyPtr = key.Ptr
 	} else {
-		keyPtr = ptr(&key.Ptr)
+		keyPtr = unsafe.Pointer(&key.Ptr)
 	}
 
 	elemPtr := mapaccess(v.Type, v.pointer(), keyPtr)
@@ -102,11 +104,11 @@ func (v MapValue) SetMapIndex(key, value Value) {
 
 	mapType := v.Type.ConvToMap()
 	key = key.assignTo(mapType.KeyType, nil)
-	var keyPtr ptr
+	var keyPtr unsafe.Pointer
 	if key.isPointer() {
 		keyPtr = key.Ptr
 	} else {
-		keyPtr = ptr(&key.Ptr)
+		keyPtr = unsafe.Pointer(&key.Ptr)
 	}
 
 	if value.Type == nil {
@@ -121,11 +123,11 @@ func (v MapValue) SetMapIndex(key, value Value) {
 	}
 
 	value = value.assignTo(mapType.ElemType, nil)
-	var elemPtr ptr
+	var elemPtr unsafe.Pointer
 	if value.isPointer() {
 		elemPtr = value.Ptr
 	} else {
-		elemPtr = ptr(&value.Ptr)
+		elemPtr = unsafe.Pointer(&value.Ptr)
 	}
 	mapassign(v.Type, v.pointer(), keyPtr, elemPtr)
 }

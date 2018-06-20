@@ -454,15 +454,15 @@ func (p *Twordp) M(x int, b byte) (byte, int) { return b, x + int(*p) }
 func (v Tbigv) M(x int, b byte) (byte, int)   { return b, x + int(v[0]) + int(v[1]) }
 func (p *Tbigp) M(x int, b byte) (byte, int)  { return b, x + int(p[0]) + int(p[1]) }
 func (p Point) AnotherMethod(scale int) int {
-	println("AnotherMethod called with scale = " + strconv.Itoa(scale))
+	println("AnotherMethod called with scale = " + I2A(scale, -1))
 	return -1
 }
 func (p Point) Dist(scale int) int {
-	println("Dist called with scale = " + strconv.Itoa(scale))
+	println("Dist called with scale = " + I2A(scale, -1))
 	return p.x*p.x*scale + p.y*p.y*scale
 }
 func (p Point) GCMethod(k int) int {
-	println("GCMethod called with k = " + strconv.Itoa(k))
+	println("GCMethod called with k = " + I2A(k, -1))
 	runtime.GC()
 	return k + p.x
 }

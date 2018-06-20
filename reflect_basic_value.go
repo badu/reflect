@@ -8,6 +8,7 @@ package reflect
 
 import (
 	"math"
+	"unsafe"
 )
 
 func (v UintValue) CanSet() bool {
@@ -370,7 +371,7 @@ func (v Value) UnsafePointer() PointerValue {
 	}
 }
 
-func (v PointerValue) Get() ptr {
+func (v PointerValue) Get() unsafe.Pointer {
 	if v.ptr == nil {
 		if willPrintDebug {
 			println("reflect.x.error : invalid `unsafe.Pointer` (nil pointer)")
@@ -388,7 +389,7 @@ func (v PointerValue) CanSet() bool {
 }
 
 // SetPointer sets the ptr value v to x.
-func (v PointerValue) Set(x ptr) bool {
+func (v PointerValue) Set(x unsafe.Pointer) bool {
 	if v.CanSet() {
 		loadConvPtr(v.ptr, x)
 		return true

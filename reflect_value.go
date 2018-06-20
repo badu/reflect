@@ -6,6 +6,8 @@
 
 package reflect
 
+import "unsafe"
+
 // Kind returns v's Kind.
 // If v is the zero Value (IsValid returns false), Kind returns Invalid.
 func (v Value) Kind() Kind           { return Kind(v.Flag & kindMaskFlag) }
@@ -28,7 +30,7 @@ func (v Value) ro() Flag {
 // assignTo returns a value v that can be assigned directly to Type.
 // It panics if v is not assignable to Type.
 // For a conversion to an interface type, target is a suggested scratch space to use.
-func (v Value) assignTo(dst *RType, target ptr) Value {
+func (v Value) assignTo(dst *RType, target unsafe.Pointer) Value {
 	if v.hasMethodFlag() {
 		//v = v.makeMethodValue()
 		panic("Value.assignTo : This is a method.")
@@ -80,7 +82,7 @@ func (v Value) valueInterface() interface{} {
 // packEface converts v to the empty interface.
 func (v Value) packEface() interface{} {
 	var i interface{}
-	e := toIface(ptr(&i))
+	e := toIface(unsafe.Pointer(&i))
 	// First, fill in the data portion of the interface.
 	switch {
 	case v.Type.isDirectIface():
@@ -131,7 +133,7 @@ func (v Value) Iface() Value {
 			eface = convIfaceMeth(v.Ptr)
 		}
 		// unpackEface converts the empty interface 'eface' to a Value.
-		e := toIface(ptr(&eface))
+		e := toIface(unsafe.Pointer(&eface))
 		// NOTE: don't read e.word until we know whether it is really a pointer or not.
 		t := e.Type
 		if t == nil {
@@ -238,7 +240,7 @@ func (v Value) Set(toX Value) bool {
 		}
 		return false
 	}
-	var target ptr
+	var target unsafe.Pointer
 	if v.Kind() == Interface {
 		target = v.Ptr
 	}
@@ -253,7 +255,7 @@ func (v Value) Set(toX Value) bool {
 
 // pointer returns the underlying pointer represented by v.
 // v.Kind() must be ptr, Map, Chan, Func, or UnsafePointer
-func (v Value) pointer() ptr {
+func (v Value) pointer() unsafe.Pointer {
 	if v.Type.size != PtrSize || !v.Type.hasPointers() {
 		if willPrintDebug {
 			panic("reflect.Value.pointer: called pointer on a NON pointer Value")
@@ -292,7 +294,7 @@ func (v Value) Pointer() uintptr {
 			// so their Pointers are equal. The function used here must
 			// match the one used in makeMethodValue.
 			f := methodValueCall
-			return **(**uintptr)(ptr(&f))
+			return **(**uintptr)(unsafe.Pointer(&f))
 		}
 		p := v.pointer()
 		// Non-nil func value points at data block.
@@ -414,7 +416,7 @@ func (v Value) makeMethodValue() Value {
 	// actual code address. (A Go func value is a pointer
 	// to a C function pointer. https://golang.org/s/go11func.)
 	dummy := methodValueCall
-	code := **(**uintptr)(ptr(&dummy))
+	code := **(**uintptr)(unsafe.Pointer(&dummy))
 
 	// methodValue contains a stack map for use by the runtime
 	_, _, _, stack := funcLayout(funcType, nil)
@@ -433,7 +435,7 @@ func (v Value) makeMethodValue() Value {
 	if !ok && willPrintDebug {
 		panic("INTERNAL ERROR ON makeMethodValue : methodReceiver call failed.")
 	}
-	return Value{Type: funcType, Ptr: ptr(fv), Flag: v.Flag&exportFlag | Flag(Func)}
+	return Value{Type: funcType, Ptr: unsafe.Pointer(fv), Flag: v.Flag&exportFlag | Flag(Func)}
 }
 
 // methodReceiver returns information about the receiver
@@ -443,7 +445,7 @@ func (v Value) makeMethodValue() Value {
 // The return value rcvrtype gives the method's actual receiver type.
 // The return value t gives the method type signature (without the receiver).
 // The return value fn is a pointer to the method code.
-func (v Value) methodReceiver(i int) (*RType, *RType, ptr, bool) {
+func (v Value) methodReceiver(i int) (*RType, *RType, unsafe.Pointer, bool) {
 	if v.Type.Kind() == Interface {
 		iface := v.Type.convToIface()
 		if uint(i) >= uint(len(iface.methods)) {
@@ -467,7 +469,7 @@ func (v Value) methodReceiver(i int) (*RType, *RType, ptr, bool) {
 			}
 			return nil, nil, nil, false
 		}
-		return concrete.iTab.Type, iface.typeOffset(method.typeOffset), ptr(&concrete.iTab.fun[i]), true
+		return concrete.iTab.Type, iface.typeOffset(method.typeOffset), unsafe.Pointer(&concrete.iTab.fun[i]), true
 	}
 
 	methods := exportedMethods(v.Type)
@@ -485,7 +487,7 @@ func (v Value) methodReceiver(i int) (*RType, *RType, ptr, bool) {
 		return nil, nil, nil, false
 	}
 	ifaceFn := v.Type.textOffset(method.ifaceCall)
-	return v.Type, v.Type.typeOffset(method.typeOffset), ptr(&ifaceFn), true
+	return v.Type, v.Type.typeOffset(method.typeOffset), unsafe.Pointer(&ifaceFn), true
 }
 
 // Call calls the function v with the input arguments in.
@@ -497,7 +499,7 @@ func (v Value) Call(valArgs []Value) ([]Value, bool) {
 	// Get function pointer, type.
 	t := v.Type
 	var (
-		fnPtr    ptr
+		fnPtr    unsafe.Pointer
 		rcvr     Value
 		rcvrType *RType
 		ok       bool
@@ -640,7 +642,7 @@ func (v Value) Call(valArgs []Value) ([]Value, bool) {
 // encode that receiver at the start of the argument list.
 // Reflect uses the "interface" calling convention for
 // methods, which always uses one word to record the receiver.
-func (v Value) storeRcvr(p ptr) {
+func (v Value) storeRcvr(p unsafe.Pointer) {
 	if v.Type.Kind() == Interface {
 		// the interface data word becomes the receiver word
 		loadConvPtr(p, (*concreteRtype)(v.Ptr).word)

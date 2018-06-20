@@ -11,12 +11,14 @@ import (
 	"unsafe"
 )
 
-func toIface(t ptr) *ifaceRtype                { return (*ifaceRtype)(t) }
-func funcOffset(t *funcType, x uintptr) ptr    { return ptr(uintptr(ptr(t)) + x) }
-func structFieldOffset(f *structField) uintptr { return f.offsetEmbed >> 1 }
-func isEmbedded(f *structField) bool           { return f.offsetEmbed&1 != 0 }
-func declareReflectName(n name) nameOff        { return addReflectOff(ptr(n.bytes)) } // It returns a new nameOff that can be used to refer to the pointer.
-func add(p ptr, x uintptr) ptr                 { return ptr(uintptr(p) + x) }         // add returns p+x.
+func toIface(t unsafe.Pointer) *ifaceRtype { return (*ifaceRtype)(t) }
+func funcOffset(t *funcType, x uintptr) unsafe.Pointer {
+	return unsafe.Pointer(uintptr(unsafe.Pointer(t)) + x)
+}
+func structFieldOffset(f *structField) uintptr       { return f.offsetEmbed >> 1 }
+func isEmbedded(f *structField) bool                 { return f.offsetEmbed&1 != 0 }
+func declareReflectName(n name) int32                { return addReflectOff(unsafe.Pointer(n.bytes)) } // It returns a new nameOff that can be used to refer to the pointer.
+func add(p unsafe.Pointer, x uintptr) unsafe.Pointer { return unsafe.Pointer(uintptr(p) + x) }         // add returns p+x.
 
 func byteSliceFromParams(params ...interface{}) []byte {
 	result := make([]byte, 0)
@@ -61,7 +63,7 @@ func typesByString(target []byte) []*RType {
 		for i < j {
 			h := i + (j-i)/2 // avoid overflow when computing h
 			// i ≤ h < j
-			currentType = (*RType)(ptr(uintptr(section) + uintptr(offs[h])))
+			currentType = (*RType)(unsafe.Pointer(uintptr(section) + uintptr(offs[h])))
 			search = currentType.nameOffsetStr().name()
 			if currentType.hasExtraStar() {
 				search = search[1:]
@@ -81,7 +83,7 @@ func typesByString(target []byte) []*RType {
 		// We could do a second binary search, but the caller is going
 		// to do a linear scan anyway.
 		for k := i; k < len(offs); k++ {
-			currentType = (*RType)(ptr(uintptr(section) + uintptr(offs[k])))
+			currentType = (*RType)(unsafe.Pointer(uintptr(section) + uintptr(offs[k])))
 			search = currentType.nameOffsetStr().name()
 			if currentType.hasExtraStar() {
 				search = search[1:]
@@ -106,25 +108,25 @@ func appendVarint(x []byte, v uintptr) []byte {
 
 func emptyFuncProto() funcType {
 	var ifunc interface{} = (func())(nil)
-	prototype := *(**funcType)(ptr(&ifunc))
+	prototype := *(**funcType)(unsafe.Pointer(&ifunc))
 	return *prototype
 }
 
 func emptySliceProto() sliceType {
-	var islice interface{} = ([]ptr)(nil)
-	prototype := *(**sliceType)(ptr(&islice))
+	var islice interface{} = ([]unsafe.Pointer)(nil)
+	prototype := *(**sliceType)(unsafe.Pointer(&islice))
 	return *prototype
 }
 
 func emptyArrayProto() arrayType {
-	var iarray interface{} = [1]ptr{}
-	prototype := *(**arrayType)(ptr(&iarray))
+	var iarray interface{} = [1]unsafe.Pointer{}
+	prototype := *(**arrayType)(unsafe.Pointer(&iarray))
 	return *prototype
 }
 
 func emptyPtrProto() ptrType {
-	var iptr interface{} = (*ptr)(nil)
-	prototype := *(**ptrType)(ptr(&iptr))
+	var iptr interface{} = (*unsafe.Pointer)(nil)
+	prototype := *(**ptrType)(unsafe.Pointer(&iptr))
 	return *prototype
 }
 
@@ -276,26 +278,26 @@ func methods(t *RType) ([]method, bool) {
 	var ut *uncommonType
 	switch t.Kind() {
 	case Struct:
-		ut = &(*uncommonStruct)(ptr(t)).u
+		ut = &(*uncommonStruct)(unsafe.Pointer(t)).u
 	case Ptr:
-		ut = &(*uncommonPtr)(ptr(t)).u
+		ut = &(*uncommonPtr)(unsafe.Pointer(t)).u
 	case Func:
-		ut = &(*uncommonFunc)(ptr(t)).u
+		ut = &(*uncommonFunc)(unsafe.Pointer(t)).u
 	case Slice:
-		ut = &(*uncommonSlice)(ptr(t)).u
+		ut = &(*uncommonSlice)(unsafe.Pointer(t)).u
 	case Array:
-		ut = &(*uncommonArray)(ptr(t)).u
+		ut = &(*uncommonArray)(unsafe.Pointer(t)).u
 	case Interface:
-		ut = &(*uncommonInterface)(ptr(t)).u
+		ut = &(*uncommonInterface)(unsafe.Pointer(t)).u
 	default:
-		ut = &(*uncommonConcrete)(ptr(t)).u
+		ut = &(*uncommonConcrete)(unsafe.Pointer(t)).u
 	}
 
 	if ut.mCount == 0 {
 		return nil, false
 	}
 
-	return (*[1 << 16]method)(ptr(uintptr(ptr(ut)) + uintptr(ut.mOffset)))[:ut.mCount:ut.mCount], true
+	return (*[1 << 16]method)(unsafe.Pointer(uintptr(unsafe.Pointer(ut)) + uintptr(ut.mOffset)))[:ut.mCount:ut.mCount], true
 }
 
 // funcLayout computes a struct type representing the layout of the function arguments and return values for the function type t.
@@ -417,3 +419,20 @@ func methodName() string {
 	return f.Name() + " line : " + strconv.Itoa(line)
 }
 **/
+
+// Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding - Found in "log" package
+func I2A(i int, wid int) string {
+	// Assemble decimal in reverse order.
+	var b [20]byte
+	bp := len(b) - 1
+	for i >= 10 || wid > 1 {
+		wid--
+		q := i / 10
+		b[bp] = byte('0' + i - q*10)
+		bp--
+		i = q
+	}
+	// i < 10
+	b[bp] = byte('0' + i)
+	return string(b[bp:])
+}

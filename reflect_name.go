@@ -6,6 +6,8 @@
 
 package reflect
 
+import "unsafe"
+
 func newName(newName []byte) name {
 	if len(newName) > 1<<16-1 {
 		panic("reflect.x.error : name too long: " + string(newName))
@@ -21,7 +23,7 @@ func newName(newName []byte) name {
 }
 
 func (n name) data(offset int) *byte {
-	return (*byte)(ptr(uintptr(ptr(n.bytes)) + uintptr(offset)))
+	return (*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(n.bytes)) + uintptr(offset)))
 }
 
 func (n name) isExported() bool {
@@ -47,16 +49,16 @@ func (n name) name() []byte {
 	if n.bytes == nil {
 		return nil
 	}
-	info := (*[4]byte)(ptr(n.bytes))
+	info := (*[4]byte)(unsafe.Pointer(n.bytes))
 	nameLen := int(info[1])<<8 | int(info[2])
 	// read into string
 	str := "" //make([]byte, nameLen)
-	header := (*stringHeader)(ptr(&str))
-	header.Data = ptr(&info[3])
+	header := (*stringHeader)(unsafe.Pointer(&str))
+	header.Data = unsafe.Pointer(&info[3])
 	header.Len = nameLen
 	// force convert to []byte
 	var result []byte
-	byteHeader := (*sliceHeader)(ptr(&result))
+	byteHeader := (*sliceHeader)(unsafe.Pointer(&result))
 	byteHeader.Data = header.Data
 	byteHeader.Len = header.Len
 	byteHeader.Cap = header.Len
@@ -71,12 +73,12 @@ func (n name) tag() []byte {
 	nameLen := n.nameLen()
 	// read into string
 	str := "" //make([]byte, tagLen)
-	header := (*stringHeader)(ptr(&str))
-	header.Data = ptr(n.data(5 + nameLen))
+	header := (*stringHeader)(unsafe.Pointer(&str))
+	header.Data = unsafe.Pointer(n.data(5 + nameLen))
 	header.Len = tagLen
 	// force convert to []byte
 	var result []byte
-	byteHeader := (*sliceHeader)(ptr(&result))
+	byteHeader := (*sliceHeader)(unsafe.Pointer(&result))
 	byteHeader.Data = header.Data
 	byteHeader.Len = header.Len
 	byteHeader.Cap = header.Len
@@ -93,7 +95,7 @@ func (n name) pkgPath() []byte {
 	}
 	var nameOffset int32
 	// Note that this field may not be aligned in memory, so we cannot use a direct int32 assignment here.
-	copy((*[4]byte)(ptr(&nameOffset))[:], (*[4]byte)(ptr(n.data(offset)))[:])
-	pkgPathName := name{(*byte)(resolveTypeOff(ptr(n.bytes), nameOffset))}
+	copy((*[4]byte)(unsafe.Pointer(&nameOffset))[:], (*[4]byte)(unsafe.Pointer(n.data(offset)))[:])
+	pkgPathName := name{(*byte)(resolveTypeOff(unsafe.Pointer(n.bytes), nameOffset))}
 	return pkgPathName.name()
 }

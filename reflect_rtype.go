@@ -8,37 +8,44 @@ package reflect
 
 import (
 	"bytes"
+	"unsafe"
 )
 
-func (t *RType) isDirectIface() bool              { return t.kind&kindDirectIface == 0 } // isDirectIface reports whether t is stored indirectly in an interface value.
-func (t *RType) hasPointers() bool                { return t.kind&kindNoPointers == 0 }
-func (t *RType) canHandleGC() bool                { return t.kind&kindGCProg == 0 }
-func (t *RType) isAnon() bool                     { return t.extraTypeFlag&hasNameFlag == 0 }
-func (t *RType) hasExtraStar() bool               { return t.extraTypeFlag&hasExtraStarFlag != 0 }
-func (t *RType) hasInfoFlag() bool                { return t.extraTypeFlag&hasExtraInfoFlag != 0 }
-func (t *RType) hasName() bool                    { return !t.isAnon() && len(t.nameOffsetStr().name()) > 0 }
-func (t *RType) nameOffset(offset nameOff) name   { return name{(*byte)(resolveNameOff(ptr(t), offset))} }
-func (t *RType) nameOffsetStr() name              { return name{(*byte)(resolveNameOff(ptr(t), t.str))} }
-func (t *RType) typeOffset(offset typeOff) *RType { return (*RType)(resolveTypeOff(ptr(t), offset)) }
-func (t *RType) textOffset(offset textOff) ptr    { return resolveTextOff(ptr(t), offset) }
-func (t *RType) convToPtr() *ptrType              { return (*ptrType)(ptr(t)) }
-func (t *RType) convToStruct() *structType        { return (*structType)(ptr(t)) }
-func (t *RType) convToFn() *funcType              { return (*funcType)(ptr(t)) }
-func (t *RType) convToIface() *ifaceType          { return (*ifaceType)(ptr(t)) }
-func (t *RType) numIn() int                       { return int(t.convToFn().InLen) }
-func (t *RType) numOut() int                      { return len(outParams(t.convToFn())) }
-func (t *RType) ConvToMap() *mapType              { return (*mapType)(ptr(t)) }
-func (t *RType) ConvToSlice() *sliceType          { return (*sliceType)(ptr(t)) }
-func (t *RType) ConvToArray() *arrayType          { return (*arrayType)(ptr(t)) }
-func (t *RType) ifaceMethods() []ifaceMethod      { return t.convToIface().methods }
-func (t *RType) Deref() *RType                    { return (*ptrType)(ptr(t)).Type }
-func (t *RType) NoOfIfaceMethods() int            { return len(t.ifaceMethods()) }
-func (t *RType) Kind() Kind                       { return Kind(t.kind & kindMask) }
-func (t *RType) Size() uintptr                    { return t.size }
-func (t *RType) FieldAlign() int                  { return int(t.fieldAlign) }
-func (t *RType) Align() int                       { return int(t.align) }
-func (t *RType) String() string                   { return string(t.nomen()) }
-func (t *RType) IsExported() bool                 { return t.kind&(1<<5|1<<6) == 0 }
+func (t *RType) isDirectIface() bool { return t.kind&kindDirectIface == 0 } // isDirectIface reports whether t is stored indirectly in an interface value.
+func (t *RType) hasPointers() bool   { return t.kind&kindNoPointers == 0 }
+func (t *RType) canHandleGC() bool   { return t.kind&kindGCProg == 0 }
+func (t *RType) isAnon() bool        { return t.extraTypeFlag&hasNameFlag == 0 }
+func (t *RType) hasExtraStar() bool  { return t.extraTypeFlag&hasExtraStarFlag != 0 }
+func (t *RType) hasInfoFlag() bool   { return t.extraTypeFlag&hasExtraInfoFlag != 0 }
+func (t *RType) hasName() bool       { return !t.isAnon() && len(t.nameOffsetStr().name()) > 0 }
+func (t *RType) nameOffset(offset int32) name {
+	return name{(*byte)(resolveNameOff(unsafe.Pointer(t), offset))}
+}
+func (t *RType) nameOffsetStr() name { return name{(*byte)(resolveNameOff(unsafe.Pointer(t), t.str))} }
+func (t *RType) typeOffset(offset int32) *RType {
+	return (*RType)(resolveTypeOff(unsafe.Pointer(t), offset))
+}
+func (t *RType) textOffset(offset int32) unsafe.Pointer {
+	return resolveTextOff(unsafe.Pointer(t), offset)
+}
+func (t *RType) convToPtr() *ptrType         { return (*ptrType)(unsafe.Pointer(t)) }
+func (t *RType) convToStruct() *structType   { return (*structType)(unsafe.Pointer(t)) }
+func (t *RType) convToFn() *funcType         { return (*funcType)(unsafe.Pointer(t)) }
+func (t *RType) convToIface() *ifaceType     { return (*ifaceType)(unsafe.Pointer(t)) }
+func (t *RType) numIn() int                  { return int(t.convToFn().InLen) }
+func (t *RType) numOut() int                 { return len(outParams(t.convToFn())) }
+func (t *RType) ConvToMap() *mapType         { return (*mapType)(unsafe.Pointer(t)) }
+func (t *RType) ConvToSlice() *sliceType     { return (*sliceType)(unsafe.Pointer(t)) }
+func (t *RType) ConvToArray() *arrayType     { return (*arrayType)(unsafe.Pointer(t)) }
+func (t *RType) ifaceMethods() []ifaceMethod { return t.convToIface().methods }
+func (t *RType) Deref() *RType               { return (*ptrType)(unsafe.Pointer(t)).Type }
+func (t *RType) NoOfIfaceMethods() int       { return len(t.ifaceMethods()) }
+func (t *RType) Kind() Kind                  { return Kind(t.kind & kindMask) }
+func (t *RType) Size() uintptr               { return t.size }
+func (t *RType) FieldAlign() int             { return int(t.fieldAlign) }
+func (t *RType) Align() int                  { return int(t.align) }
+func (t *RType) String() string              { return string(t.nomen()) }
+func (t *RType) IsExported() bool            { return t.kind&(1<<5|1<<6) == 0 }
 
 /**
 func (t *RType) GoString() string {
@@ -273,19 +280,19 @@ func (t *RType) pkg() (int32, bool) {
 	var ut *uncommonType
 	switch t.Kind() {
 	case Struct:
-		ut = &(*uncommonStruct)(ptr(t)).u
+		ut = &(*uncommonStruct)(unsafe.Pointer(t)).u
 	case Ptr:
-		ut = &(*uncommonPtr)(ptr(t)).u
+		ut = &(*uncommonPtr)(unsafe.Pointer(t)).u
 	case Func:
-		ut = &(*uncommonFunc)(ptr(t)).u
+		ut = &(*uncommonFunc)(unsafe.Pointer(t)).u
 	case Slice:
-		ut = &(*uncommonSlice)(ptr(t)).u
+		ut = &(*uncommonSlice)(unsafe.Pointer(t)).u
 	case Array:
-		ut = &(*uncommonArray)(ptr(t)).u
+		ut = &(*uncommonArray)(unsafe.Pointer(t)).u
 	case Interface:
-		ut = &(*uncommonInterface)(ptr(t)).u
+		ut = &(*uncommonInterface)(unsafe.Pointer(t)).u
 	default:
-		ut = &(*uncommonConcrete)(ptr(t)).u
+		ut = &(*uncommonConcrete)(unsafe.Pointer(t)).u
 	}
 	return ut.pkgPath, true
 }
@@ -565,7 +572,7 @@ func (t *RType) Fields(inspect InspectTypeFn) {
 		}
 		return
 	}
-	structType := (*structType)(ptr(t))
+	structType := (*structType)(unsafe.Pointer(t))
 	for i := range structType.fields {
 		field := &structType.fields[i]
 		fn := field.name

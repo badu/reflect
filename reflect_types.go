@@ -159,11 +159,7 @@ var (
 type (
 	// Aliases
 	// -------
-	ptr     = unsafe.Pointer // alias, for readability
-	nameOff = int32          // offset to a name
-	typeOff = int32          // offset to an *Type
-	textOff = int32          // offset from top of text section
-	Flag    = uintptr
+	Flag = uintptr
 	// extraTypeFlag is used by an Type to signal what extra type information is available in the memory directly following the Type value.
 	//
 	// extraTypeFlag values must be kept in sync with copies in:
@@ -187,10 +183,10 @@ type (
 	// Method on non-interface type
 	// (COMPILER)
 	method struct {
-		nameOffset nameOff // name of method
-		typeOffset typeOff // method type (without receiver)
-		ifaceCall  textOff // fn used in interface call (one-word receiver)
-		normCall   textOff // fn used for normal method call
+		nameOffset int32 // name of method
+		typeOffset int32 // method type (without receiver)
+		ifaceCall  int32 // fn used in interface call (one-word receiver)
+		normCall   int32 // fn used for normal method call
 	}
 	// uncommonType is present only for types with names or methods
 	// (if T is a named type, the uncommonTypes for T and *T have methods).
@@ -198,11 +194,11 @@ type (
 	// to describe an unnamed type with no methods.
 	// (COMPILER)
 	uncommonType struct {
-		pkgPath nameOff // import path; empty for built-in types like int, string
-		mCount  uint16  // number of methods
-		_       uint16  // unused (future exported methods)
-		mOffset uint32  // offset from this uncommontypeto [mCount]method
-		_       uint32  // unused
+		pkgPath int32  // import path; empty for built-in types like int, string
+		mCount  uint16 // number of methods
+		_       uint16 // unused (future exported methods)
+		mOffset uint32 // offset from this uncommontypeto [mCount]method
+		_       uint32 // unused
 	}
 	// (COMPILER)
 	uncommonStruct struct {
@@ -269,8 +265,8 @@ type (
 	// ifaceMethod represents a method on an interface type
 	// (COMPILER)
 	ifaceMethod struct {
-		nameOffset nameOff // name of method
-		typeOffset typeOff // .(*MethodType) underneath
+		nameOffset int32 // name of method
+		typeOffset int32 // .(*MethodType) underneath
 	}
 
 	// ifaceType represents an interface type.
@@ -436,8 +432,8 @@ type (
 		kind          uint8     // enumeration for C
 		alg           *algo     // algorithm table
 		gcData        *byte     // garbage collection data
-		str           nameOff   // string form
-		ptrToThis     typeOff   // type for pointer to this type, may be zero
+		str           int32     // string form
+		ptrToThis     int32     // type for pointer to this type, may be zero
 	}
 
 	// The first two words of this type must be kept in sync with makeFuncImpl and runtime.reflectMethodValue.

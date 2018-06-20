@@ -13,14 +13,16 @@ import (
 
 // arrayAt returns the i-th element of p,  an array whose elements are eltSize bytes wide.
 // The array pointed at by p must have at least i+1 elements: it is invalid (but impossible to check here) to pass i >= len, because then the result will point outside the array. the benefit is to surface this assumption at the call site.)
-func arrayAt(p ptr, i int, eltSize uintptr) ptr { return add(p, uintptr(i)*eltSize) }
-func align(x, n uintptr) uintptr                { return (x + n - 1) &^ (n - 1) } // align returns the result of rounding x up to a multiple of n. n must be a power of two.
-func convPtr(p ptr) ptr                         { return *(*ptr)(p) }
-func loadConvPtr(p ptr, x ptr)                  { *(*ptr)(p) = x }
-func convIface(p ptr) interface{}               { return *(*interface{})(p) }
-func loadConvIface(p ptr, x interface{})        { *(*interface{})(p) = x }
-func convIfaceMeth(p ptr) interface{}           { return *(*interface{ M() })(p) }
-func convToSliceHeader(p ptr) *SliceHeader      { return (*SliceHeader)(p) }
+func arrayAt(p unsafe.Pointer, i int, eltSize uintptr) unsafe.Pointer {
+	return add(p, uintptr(i)*eltSize)
+}
+func align(x, n uintptr) uintptr                      { return (x + n - 1) &^ (n - 1) } // align returns the result of rounding x up to a multiple of n. n must be a power of two.
+func convPtr(p unsafe.Pointer) unsafe.Pointer         { return *(*unsafe.Pointer)(p) }
+func loadConvPtr(p unsafe.Pointer, x unsafe.Pointer)  { *(*unsafe.Pointer)(p) = x }
+func convIface(p unsafe.Pointer) interface{}          { return *(*interface{})(p) }
+func loadConvIface(p unsafe.Pointer, x interface{})   { *(*interface{})(p) = x }
+func convIfaceMeth(p unsafe.Pointer) interface{}      { return *(*interface{ M() })(p) }
+func convToSliceHeader(p unsafe.Pointer) *SliceHeader { return (*SliceHeader)(p) }
 func internalNew(t *RType) Value {
 	return Value{Type: t, Ptr: unsafeNew(t), Flag: Flag(t.Kind())&exportFlag | pointerFlag | addressableFlag | Flag(t.Kind())}
 }
@@ -174,7 +176,7 @@ func bucketOf(ktyp, etyp *RType) *RType {
 			if !ktyp.canHandleGC() {
 				panic("reflect.x.error : unexpected GC program in MapOf")
 			}
-			kmask := (*[16]byte)(ptr(ktyp.gcData))
+			kmask := (*[16]byte)(unsafe.Pointer(ktyp.gcData))
 			for i := uintptr(0); i < ktyp.ptrData/PtrSize; i++ {
 				if (kmask[i/8]>>(i%8))&1 != 0 {
 					for j := uintptr(0); j < bucketSize; j++ {
@@ -190,7 +192,7 @@ func bucketOf(ktyp, etyp *RType) *RType {
 			if !etyp.canHandleGC() {
 				panic("reflect.x.error : unexpected GC program in MapOf")
 			}
-			emask := (*[16]byte)(ptr(etyp.gcData))
+			emask := (*[16]byte)(unsafe.Pointer(etyp.gcData))
 			for i := uintptr(0); i < etyp.ptrData/PtrSize; i++ {
 				if (emask[i/8]>>(i%8))&1 != 0 {
 					for j := uintptr(0); j < bucketSize; j++ {
@@ -277,7 +279,7 @@ func needKeyUpdate(t *RType) bool {
 	}
 }
 
-func assertE2I(v Value, dst *RType, target ptr) {
+func assertE2I(v Value, dst *RType, target unsafe.Pointer) {
 	// TODO : @badu - Type links to methods
 	//to be read "if NumMethod(dst) == 0{"
 	if (dst.Kind() == Interface && dst.NoOfIfaceMethods() == 0) || (dst.Kind() != Interface && lenExportedMethods(dst) == 0) {
@@ -333,7 +335,7 @@ func cvtI2I(v Value, typ *RType) Value {
 //
 // NOTE: This function must be marked as a "wrapper" in the generated code, so that the linker can make it work correctly for panic and recover.
 // The gc compilers know to do that for the name "reflect.callMethod".
-func callMethod(ctx *methodValue, framePtr ptr) {
+func callMethod(ctx *methodValue, framePtr unsafe.Pointer) {
 	rcvrType, t, fn, _ := ctx.rcvrVal.methodReceiver(ctx.method)
 	frameType, argSize, retOffset, _ := funcLayout(t, rcvrType)
 	// Make a new frame that is one word bigger so we can store the receiver.
@@ -428,6 +430,7 @@ func callReflect(ctxt *makeFuncImpl, frame unsafe.Pointer) {
 		for i, typ := range outParams(ftyp) {
 			v := out[i]
 			if v.Type != typ {
+				// TODO : on MakeFunc it panics here if the signature of the returned function is wrong
 				panic("reflect: function created by MakeFunc using " + funcName(f) + " returned wrong type: have " + out[i].Type.String() + " for " + typ.String())
 			}
 			if v.Flag&exportFlag != 0 {

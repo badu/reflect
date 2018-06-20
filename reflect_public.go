@@ -7,7 +7,6 @@
 package reflect
 
 import (
-	"strconv"
 	"unicode/utf8"
 	"unsafe"
 )
@@ -38,7 +37,7 @@ func ReflectOn(i interface{}) Value {
 		return Value{}
 	}
 	// unpackEface converts the empty interface i to a Value.
-	e := toIface(ptr(&i))
+	e := toIface(unsafe.Pointer(&i))
 	// NOTE: don't read e.word until we know whether it is really a pointer or not.
 	if e.Type == nil {
 		return Value{}
@@ -56,7 +55,7 @@ func ReflectOnPtr(i interface{}) Value {
 		panic("Bad usage : provided interface should something else than nil")
 	}
 	// unpackEface converts the empty interface i to a Value.
-	e := toIface(ptr(&i))
+	e := toIface(unsafe.Pointer(&i))
 	// NOTE: don't read e.word until we know whether it is really a pointer or not.
 
 	if e.Type == nil {
@@ -84,7 +83,7 @@ func ReflectOnPtr(i interface{}) Value {
 // TypeOf returns the reflection Type that represents the dynamic type of i.
 // If i is a nil interface value, TypeOf returns nil.
 func TypeOf(i interface{}) *RType {
-	result := (*toIface(ptr(&i))).Type
+	result := (*toIface(unsafe.Pointer(&i))).Type
 	if result == nil {
 		return nil
 	}
@@ -132,7 +131,7 @@ func Convert(v Value, typ *RType) Value {
 			return makeComplex(v.ro(), v.Complex().Get(), typ) // convert operation: complexXX -> complexXX
 		}
 	case String:
-		sliceElem := (*sliceType)(ptr(typ)).ElemType
+		sliceElem := (*sliceType)(unsafe.Pointer(typ)).ElemType
 		if destKind == Slice && sliceElem.pkgPathLen() == 0 {
 			switch sliceElem.Kind() {
 			case Uint8:
@@ -142,7 +141,7 @@ func Convert(v Value, typ *RType) Value {
 			}
 		}
 	case Slice:
-		sliceElem := (*sliceType)(ptr(v.Type)).ElemType
+		sliceElem := (*sliceType)(unsafe.Pointer(v.Type)).ElemType
 		if destKind == String && sliceElem.pkgPathLen() == 0 {
 			switch sliceElem.Kind() {
 			case Uint8:
@@ -157,8 +156,8 @@ func Convert(v Value, typ *RType) Value {
 	if v.Type.haveIdenticalUnderlyingType(typ, false) {
 		return cvtDirect(v, typ)
 	}
-	derefType := (*ptrType)(ptr(v.Type)).Type
-	destDerefType := (*ptrType)(ptr(typ)).Type
+	derefType := (*ptrType)(unsafe.Pointer(v.Type)).Type
+	destDerefType := (*ptrType)(unsafe.Pointer(typ)).Type
 	// dst and src are unnamed pointer types with same underlying base type.
 	if destKind == Ptr && !typ.hasName() &&
 		srcKind == Ptr && !v.Type.hasName() &&
@@ -274,8 +273,8 @@ func MapOf(keyType, elemType *RType) *RType {
 	}
 
 	// Make a map type.
-	var imap interface{} = (map[ptr]ptr)(nil)
-	proto := **(**mapType)(ptr(&imap))
+	var imap interface{} = (map[unsafe.Pointer]unsafe.Pointer)(nil)
+	proto := **(**mapType)(unsafe.Pointer(&imap))
 	proto.str = declareReflectName(newName(typeName))
 	proto.extraTypeFlag = 0
 	proto.hash = fnv1(elemType.hash, 'm', byte(keyType.hash>>24), byte(keyType.hash>>16), byte(keyType.hash>>8), byte(keyType.hash))
@@ -335,7 +334,7 @@ func SliceOf(typ *RType) *RType {
 // If the resulting type would be larger than the available address space, ArrayOf panics.
 func ArrayOf(elem *RType, count int) *RType {
 	// Look in known types.
-	typeName := byteSliceFromParams(sqOpenPar, strconv.Itoa(count), sqClosPar, TypeToString(elem))
+	typeName := byteSliceFromParams(sqOpenPar, I2A(count, -1), sqClosPar, TypeToString(elem))
 	for _, existingType := range typesByString(typeName) {
 		arrayType := existingType.ConvToArray()
 		if arrayType.ElemType == elem {
@@ -391,7 +390,7 @@ func ArrayOf(elem *RType, count int) *RType {
 		// Create direct pointer mask by turning each 1 bit in elem
 		// into count 1 bits in larger mask.
 		mask := make([]byte, (proto.ptrData/PtrSize+7)/8)
-		elemMask := (*[1 << 30]byte)(ptr(elem.gcData))[:]
+		elemMask := (*[1 << 30]byte)(unsafe.Pointer(elem.gcData))[:]
 		elemWords := elem.size / PtrSize
 		for j := uintptr(0); j < elem.ptrData/PtrSize; j++ {
 			if (elemMask[j/8]>>(j%8))&1 != 0 {
@@ -407,7 +406,7 @@ func ArrayOf(elem *RType, count int) *RType {
 		// Create program that emits one element
 		// and then repeats to make the array.
 		prog := []byte{0, 0, 0, 0} // will be length of prog
-		elemGC := (*[1 << 30]byte)(ptr(elem.gcData))[:]
+		elemGC := (*[1 << 30]byte)(unsafe.Pointer(elem.gcData))[:]
 		elemPtrs := elem.ptrData / PtrSize
 		if elem.canHandleGC() {
 			// Element is small with pointer mask; use as literal bits.
@@ -423,7 +422,7 @@ func ArrayOf(elem *RType, count int) *RType {
 			prog = append(prog, mask[:(n+7)/8]...)
 		} else {
 			// Element has GC program; emit one element.
-			elemProg := elemGC[4 : 4+*(*uint32)(ptr(&elemGC[0]))-1]
+			elemProg := elemGC[4 : 4+*(*uint32)(unsafe.Pointer(&elemGC[0]))-1]
 			prog = append(prog, elemProg...)
 		}
 		// Pad from ptrdata to size.
@@ -445,7 +444,7 @@ func ArrayOf(elem *RType, count int) *RType {
 		}
 		prog = appendVarint(prog, uintptr(count)-1)
 		prog = append(prog, 0)
-		*(*uint32)(ptr(&prog[0])) = uint32(len(prog) - 4)
+		*(*uint32)(unsafe.Pointer(&prog[0])) = uint32(len(prog) - 4)
 		proto.kind |= kindGCProg
 		proto.gcData = &prog[0]
 		proto.ptrData = proto.size // overestimate but ok; must match program
@@ -457,7 +456,7 @@ func ArrayOf(elem *RType, count int) *RType {
 	proto.alg = new(algo)
 	if ealg.equal != nil {
 		eequal := ealg.equal
-		proto.alg.equal = func(p, q ptr) bool {
+		proto.alg.equal = func(p, q unsafe.Pointer) bool {
 			for i := 0; i < count; i++ {
 				pi := arrayAt(p, i, esize)
 				qi := arrayAt(q, i, esize)
@@ -471,7 +470,7 @@ func ArrayOf(elem *RType, count int) *RType {
 	}
 	if ealg.hash != nil {
 		ehash := ealg.hash
-		proto.alg.hash = func(ptr ptr, seed uintptr) uintptr {
+		proto.alg.hash = func(ptr unsafe.Pointer, seed uintptr) uintptr {
 			o := seed
 			for i := 0; i < count; i++ {
 				o = ehash(arrayAt(ptr, i, esize), o)
@@ -724,7 +723,7 @@ func MakeSlice(ofType *RType, len, cap int) SliceValue {
 		}
 	}
 	s := sliceHeader{unsafeNewArray(ofType.ConvToSlice().ElemType, cap), len, cap}
-	return SliceValue{Value: Value{Type: ofType, Ptr: ptr(&s), Flag: pointerFlag | Flag(Slice)}}
+	return SliceValue{Value: Value{Type: ofType, Ptr: unsafe.Pointer(&s), Flag: pointerFlag | Flag(Slice)}}
 }
 
 // Swapper returns a function that swaps the elements in the provided
@@ -757,7 +756,7 @@ func Swapper(slice interface{}) func(i, j int) {
 	// Some common & small cases, without using memmove:
 	if hasPtr {
 		if size == PtrSize {
-			ps := *(*[]ptr)(v.Ptr)
+			ps := *(*[]unsafe.Pointer)(v.Ptr)
 			return func(i, j int) { ps[i], ps[j] = ps[j], ps[i] }
 		}
 		if typ.Kind() == String {
@@ -800,93 +799,11 @@ func TypeToString(t *RType) string {
 	return string(t.nomen())
 }
 
-// valueToString returns a textual representation of the reflection value val.
-// For debugging only.
-func ValueToString(v Value) string {
-	var str string
-
-	if !v.IsValid() {
-		return "<zero Value>"
-	}
-	switch v.Kind() {
-	case Int, Int8, Int16, Int32, Int64:
-		return strconv.FormatInt(v.Int().Get(), 10)
-	case Uint, Uint8, Uint16, Uint32, Uint64, UintPtr:
-		return strconv.FormatUint(v.Uint().Get(), 10)
-	case Float32, Float64:
-		return strconv.FormatFloat(v.Float().Get(), 'g', -1, 64)
-	case Complex64, Complex128:
-		c := v.Complex().Get()
-		return strconv.FormatFloat(real(c), 'g', -1, 64) + "+" + strconv.FormatFloat(imag(c), 'g', -1, 64) + "i"
-	case String:
-		strVal := v.String()
-		if strVal.Debug != "" {
-			return strVal.Debug
-		}
-		return strVal.Get()
-	case Bool:
-		if v.Bool().Get() {
-			return "true"
-		} else {
-			return "false"
-		}
-	case Ptr:
-		str = TypeToString(v.Type) + "("
-		if v.IsNil() {
-			str += "0"
-		} else {
-			str += "&" + ValueToString(v.Deref())
-		}
-		str += ")"
-		return str
-	case Array, Slice:
-		str += TypeToString(v.Type)
-		str += "{"
-		slice := ToSlice(v)
-		for i := 0; i < slice.Len(); i++ {
-			if i > 0 {
-				str += ", "
-			}
-			str += ValueToString(slice.Index(i))
-		}
-		str += "}"
-		return str
-	case Map:
-		str = TypeToString(v.Type)
-		str += "{"
-		str += "<can't iterate on maps>"
-		str += "}"
-		return str
-	case Struct:
-		vx := StructValue{Value: v}
-		numFields := len(v.Type.convToStruct().fields)
-		str += TypeToString(v.Type)
-		str += "{"
-		for i, n := 0, numFields; i < n; i++ {
-			if i > 0 {
-				str += ", "
-			}
-			str += ValueToString(vx.Field(i))
-		}
-		str += "}"
-		return str
-	case Interface:
-		return TypeToString(v.Type) + "(" + ValueToString(v.Iface()) + ")"
-	case Func:
-		return TypeToString(v.Type) + "(" + strconv.FormatUint(uint64(v.Pointer()), 10) + ")"
-	case Chan:
-		str = TypeToString(v.Type)
-		return str
-	default:
-		return "ValueToString ERROR : can't print type " + TypeToString(v.Type)
-	}
-}
-
 func StringKind(k Kind) string {
 	if int(k) < len(kindNames) {
 		return kindNames[k]
 	}
-	return "kind" + strconv.Itoa(int(k))
+	return "kind" + I2A(int(k), -1)
 }
 
 // UnquoteChar decodes the first character or byte in the escaped string
@@ -1087,14 +1004,14 @@ func Unquote(s string) (string, error) {
 // BytesToString effectively converts bytes to string
 // nolint: gas
 func BytesToString(src []byte) string {
-	return *(*string)(ptr(&src))
+	return *(*string)(unsafe.Pointer(&src))
 }
 
 // StringToBytes effectively converts string to bytes
 // nolint: gas
 func StringToBytes(src string) []byte {
 	strstruct := StringStructOf(&src)
-	return *(*[]byte)(ptr(&sliceHeader{
+	return *(*[]byte)(unsafe.Pointer(&sliceHeader{
 		Data: strstruct.Data,
 		Len:  strstruct.Len,
 		Cap:  strstruct.Len,
@@ -1102,7 +1019,7 @@ func StringToBytes(src string) []byte {
 }
 
 func StringStructOf(src *string) *stringHeader {
-	return (*stringHeader)(ptr(src))
+	return (*stringHeader)(unsafe.Pointer(src))
 }
 
 // Atoi parses an int from a string s.

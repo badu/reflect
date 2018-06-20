@@ -213,3 +213,7 @@ func TestExplainRelation(t *testing.T) {
 	_ = append(h2, " Go"...)
 	t.Logf("Cap = %d, Len = %d, Result = %s\n", cap(h2), len(h2), hc2)
 }
+
+func TestFastIToA(t *testing.T) {
+	t.Logf("%s", I2A(301293, -1))
+}

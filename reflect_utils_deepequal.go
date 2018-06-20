@@ -6,13 +6,15 @@
 
 package reflect
 
+import "unsafe"
+
 // During deepValueEqual, must keep track of checks that are
 // in progress. The comparison algorithm assumes that all
 // checks in progress are true when it reencounters them.
 // Visited comparisons are stored in a map indexed by visit.
 type visit struct {
-	a1  ptr
-	a2  ptr
+	a1  unsafe.Pointer
+	a2  unsafe.Pointer
 	typ *RType
 }
 
@@ -39,8 +41,8 @@ func deepValueEqual(v1, v2 Value, visited map[visit]bool, depth int) bool {
 	}
 
 	if v1.CanAddr() && v2.CanAddr() && hard(v1.Kind()) {
-		addr1 := ptr(unsafeAddr(v1))
-		addr2 := ptr(unsafeAddr(v2))
+		addr1 := unsafe.Pointer(unsafeAddr(v1))
+		addr2 := unsafe.Pointer(unsafeAddr(v2))
 		if uintptr(addr1) > uintptr(addr2) {
 			// Canonicalize order to reduce number of entries in visited.
 			// Assumes non-moving garbage collector.
