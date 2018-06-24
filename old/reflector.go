@@ -11,7 +11,12 @@ import (
 	"time"
 
 	. "reflect"
+	"sync"
 )
+
+func NewReflector() *Reflector {
+	return &Reflector{cachedModels: &safeModelsMap{l: new(sync.RWMutex), m: make(map[Type]*Model)}}
+}
 
 func (r *Reflector) ComponentsScan(components ...interface{}) error {
 	for _, component := range components {
@@ -254,7 +259,7 @@ func (r *Reflector) inspectField(field StructField, value Value) (*Field, error)
 			result.flags = result.flags | (1 << ff_is_relation)
 
 			// Get cached Model
-			if cachedValue := cachedModels.get(field.Type); cachedValue != nil {
+			if cachedValue := r.cachedModels.get(field.Type); cachedValue != nil {
 				result.Relation = cachedValue
 			} else {
 				// set the relationship
@@ -287,7 +292,7 @@ func (r *Reflector) inspectField(field StructField, value Value) (*Field, error)
 			result.flags = result.flags | (1 << ff_is_relation)
 
 			// Get cached Model
-			if cachedValue := cachedModels.get(valueType); cachedValue != nil {
+			if cachedValue := r.cachedModels.get(valueType); cachedValue != nil {
 				if printDebug {
 					fmt.Printf("%sCACHED : %v\n", r.currentModel.tabs(), valueType)
 				}
@@ -326,7 +331,7 @@ func (r *Reflector) inspectField(field StructField, value Value) (*Field, error)
 		result.flags = result.flags | (1 << ff_is_slice)
 
 		// Get cached Model
-		if cachedValue := cachedModels.get(pointedElement); cachedValue != nil {
+		if cachedValue := r.cachedModels.get(pointedElement); cachedValue != nil {
 			result.Relation = cachedValue
 		} else {
 			result.Relation = &Model{
@@ -454,7 +459,7 @@ func (r *Reflector) visit(value Value) error {
 	valueType := value.Type()
 
 	// Get cached Model
-	if cachedValue := cachedModels.get(valueType); cachedValue != nil {
+	if cachedValue := r.cachedModels.get(valueType); cachedValue != nil {
 		return nil
 	}
 
@@ -488,7 +493,7 @@ func (r *Reflector) visit(value Value) error {
 
 		r.currentModel.visited = true
 		// Set cached model
-		cachedModels.set(valueType, r.currentModel)
+		r.cachedModels.set(valueType, r.currentModel)
 
 		if printDebug {
 			fmt.Printf("%s<-Finished Visiting %s\n\n", r.currentModel.tabs(), r.currentModel.ModelType)
@@ -503,7 +508,7 @@ func (r *Reflector) visit(value Value) error {
 				fmt.Printf("%s%q %q -> %q\n", r.currentModel.tabs(), field.Name, field.Type, field.Relation.ModelType)
 			}
 			// TODO : check where the model name is set wrong (see Street struct)
-			newReflector := &Reflector{MethodsLookup: r.MethodsLookup}
+			newReflector := &Reflector{MethodsLookup: r.MethodsLookup, cachedModels: r.cachedModels}
 			newReflector.currentModel = field.Relation
 			newReflector.currentModel.Methods = make(map[string]bool)
 			err = newReflector.visit(field.Relation.Value)

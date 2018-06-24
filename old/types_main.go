@@ -54,6 +54,8 @@ type (
 	Reflector struct {
 		currentModel  *Model   // keeps track of current visiting model
 		MethodsLookup []string // white list of methods that struct have declared
+		// keeps known models (already visited)
+		cachedModels *safeModelsMap
 	}
 
 	// a safe map of models that Reflector keeps as cached
@@ -97,9 +99,6 @@ const (
 
 var (
 	printDebug bool = false
-
-	// keeps known models (already visited)
-	cachedModels *safeModelsMap
 
 	errTagSyntax      = errors.New("bad syntax for struct tag pair")
 	errTagKeySyntax   = errors.New("bad syntax for struct tag key")

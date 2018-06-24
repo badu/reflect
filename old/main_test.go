@@ -97,8 +97,8 @@ func (p Price) Print() {}
 func (p Price) String() string { return "Price Stringer" }
 
 // Test scan invoice
-func _TestInvoice(t *testing.T) {
-	r := &Reflector{}
+func TestInvoice(t *testing.T) {
+	r := NewReflector()
 	r.MethodsLookup = []string{"Print", "Send", "String"}
 	err := r.ComponentsScan(Invoice{})
 	if err != nil {
