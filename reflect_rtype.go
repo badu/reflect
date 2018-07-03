@@ -33,7 +33,7 @@ func (t *RType) convToStruct() *structType   { return (*structType)(unsafe.Point
 func (t *RType) convToFn() *funcType         { return (*funcType)(unsafe.Pointer(t)) }
 func (t *RType) convToIface() *ifaceType     { return (*ifaceType)(unsafe.Pointer(t)) }
 func (t *RType) numIn() int                  { return int(t.convToFn().InLen) }
-func (t *RType) numOut() int                 { return len(outParams(t.convToFn())) }
+func (t *RType) numOut() int                 { return len(t.convToFn().outParams()) }
 func (t *RType) ConvToMap() *mapType         { return (*mapType)(unsafe.Pointer(t)) }
 func (t *RType) ConvToSlice() *sliceType     { return (*sliceType)(unsafe.Pointer(t)) }
 func (t *RType) ConvToArray() *arrayType     { return (*arrayType)(unsafe.Pointer(t)) }
@@ -217,12 +217,12 @@ func (t *RType) haveIdenticalUnderlyingType(dest *RType, cmpTags bool) bool {
 			return false
 		}
 		for i := 0; i < destFn.numIn(); i++ {
-			if !inParam(t, i).haveIdenticalType(inParam(dest, i), cmpTags) {
+			if !srcFn.inParam(i).haveIdenticalType(destFn.inParam(i), cmpTags) {
 				return false
 			}
 		}
 		for i := 0; i < destFn.numOut(); i++ {
-			if !outParam(t, i).haveIdenticalType(outParam(dest, i), cmpTags) {
+			if !srcFn.outParam(i).haveIdenticalType(destFn.outParam(i), cmpTags) {
 				return false
 			}
 		}

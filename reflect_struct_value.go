@@ -30,8 +30,8 @@ func (v StructValue) Methods(inspect MethodInspectFn) {
 		p := methods[i]
 		mType := v.Type.typeOffset(p.typeOffset)
 		fnType := mType.convToFn()
-		input := inParams(fnType)
-		output := outParams(fnType)
+		input := fnType.inParams()
+		output := fnType.outParams()
 
 		fl := v.Flag & (stickyROFlag | pointerFlag) // Clear embedROFlag
 		fl |= Flag(Func)

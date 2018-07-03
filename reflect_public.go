@@ -591,7 +591,7 @@ func MakeMapWithSize(typ *RType, n int) MapValue {
 		}
 	}
 	m := makemap(typ, n)
-	return MapValue{Value: Value{typ, m, Flag(Map)}}
+	return MapValue{Value: Value{Type: typ, Ptr: m, Flag: Flag(Map)}}
 }
 
 // Copy copies the contents of src into dst until either
@@ -1118,5 +1118,5 @@ func MakeFunc(typ *RType, fn func(args []Value) (results []Value)) Value {
 
 	impl := &makeFuncImpl{code: code, stack: stack, typ: ftyp, fn: fn}
 
-	return Value{typ, unsafe.Pointer(impl), Flag(Func)}
+	return Value{Type: typ, Ptr: unsafe.Pointer(impl), Flag: Flag(Func)}
 }

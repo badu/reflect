@@ -393,9 +393,9 @@ func callReflect(ctxt *makeFuncImpl, frame unsafe.Pointer) {
 	ptr := frame
 	off := uintptr(0)
 	in := make([]Value, 0, int(ftyp.InLen))
-	for _, typ := range inParams(ftyp) {
+	for _, typ := range ftyp.inParams() {
 		off += -off & uintptr(typ.align-1)
-		v := Value{typ, nil, Flag(typ.Kind())}
+		v := Value{Type: typ, Ptr: nil, Flag: Flag(typ.Kind())}
 		if typ.isDirectIface() {
 			// value cannot be inlined in interface data.
 			// Must make a copy, because f might keep a reference to it,
@@ -427,7 +427,7 @@ func callReflect(ctxt *makeFuncImpl, frame unsafe.Pointer) {
 		if IsAMD64p32 {
 			off = align(off, 8)
 		}
-		for i, typ := range outParams(ftyp) {
+		for i, typ := range ftyp.outParams() {
 			v := out[i]
 			if v.Type != typ {
 				// TODO : on MakeFunc it panics here if the signature of the returned function is wrong

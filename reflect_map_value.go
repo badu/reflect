@@ -39,13 +39,13 @@ func (v MapValue) MapIndex(key Value) Value {
 	fl := v.ro() | key.ro()
 	fl |= Flag(mapElemType.Kind())
 	if !mapElemType.isDirectIface() {
-		return Value{mapElemType, convPtr(elemPtr), fl}
+		return Value{Type: mapElemType, Ptr: convPtr(elemPtr), Flag: fl}
 	}
 
 	// Copy result so future changes to the map won't change the underlying value.
 	mapElemValue := unsafeNew(mapElemType)
 	typedmemmove(mapElemType, mapElemValue, elemPtr)
-	return Value{mapElemType, mapElemValue, fl | pointerFlag}
+	return Value{Type: mapElemType, Ptr: mapElemValue, Flag: fl | pointerFlag}
 }
 
 // MapKeys returns a slice containing all the keys present in the map, in unspecified order.
@@ -75,9 +75,9 @@ func (v MapValue) MapKeys() []Value {
 			// Copy result so future changes to the map won't change the underlying value.
 			keyValue := unsafeNew(keyType)
 			typedmemmove(keyType, keyValue, key)
-			result[i] = Value{keyType, keyValue, fl | pointerFlag}
+			result[i] = Value{Type: keyType, Ptr: keyValue, Flag: fl | pointerFlag}
 		} else {
-			result[i] = Value{keyType, convPtr(key), fl}
+			result[i] = Value{Type: keyType, Ptr: convPtr(key), Flag: fl}
 		}
 		mapiternext(it)
 	}

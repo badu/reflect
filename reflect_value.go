@@ -545,8 +545,9 @@ func (v Value) Call(valArgs []Value) ([]Value, bool) {
 			return nil, false
 		}
 	}
+	srcFn := t.convToFn()
 	for i := 0; i < n; i++ {
-		if xt, targ := valArgs[i].Type, inParam(t, i); !xt.AssignableTo(targ) {
+		if xt, targ := valArgs[i].Type, srcFn.inParam(i); !xt.AssignableTo(targ) {
 			if willPrintDebug {
 				panic("reflect.StructValue.Call: using " + TypeToString(xt) + " as type " + TypeToString(targ))
 			}
@@ -585,7 +586,8 @@ func (v Value) Call(valArgs []Value) ([]Value, bool) {
 			}
 			return nil, false
 		}
-		targ := inParam(t, i)
+
+		targ := srcFn.inParam(i)
 		alignUPtr := uintptr(targ.align)
 		offset = (offset + alignUPtr - 1) &^ (alignUPtr - 1)
 		n := targ.size
@@ -622,7 +624,7 @@ func (v Value) Call(valArgs []Value) ([]Value, bool) {
 	results := make([]Value, numResults)
 	offset = returnOffset
 	for i := 0; i < numResults; i++ {
-		tv := outParam(t, i)
+		tv := srcFn.outParam(i)
 		a := uintptr(tv.align)
 		offset = (offset + a - 1) &^ (a - 1)
 		if tv.size != 0 {
@@ -656,37 +658,37 @@ func (v Value) storeRcvr(p unsafe.Pointer) {
 func (v Value) MethodType() *RType {
 	// Method value.
 	// v.Type describes the receiver, not the method type.
-	shitFlag := v.shiftMethodFlag()
+	shift := v.shiftMethodFlag()
 	if v.Type.Kind() == Interface {
 		// Method on interface.
 		intf := v.Type.convToIface()
-		if uint(shitFlag) >= uint(len(intf.methods)) {
+		if uint(shift) >= uint(len(intf.methods)) {
 			if willPrintDebug {
 				panic("reflect.Value.MethodType: x error: invalid interface method index (interface)")
 			}
 			return nil
 		}
-		method := &intf.methods[shitFlag]
+		method := &intf.methods[shift]
 		return v.Type.typeOffset(method.typeOffset)
 	}
 
 	// Method on concrete type.
 	methods := exportedMethods(v.Type)
-	if uint(shitFlag) >= uint(len(methods)) {
+	if uint(shift) >= uint(len(methods)) {
 		if willPrintDebug {
 			panic("reflect.Value.MethodType: x error: invalid concrete method index")
 		}
 		return nil
 	}
-	method := methods[shitFlag]
+	method := methods[shift]
 	return v.Type.typeOffset(method.typeOffset)
 }
 
 func (v Value) In(i int) *RType {
 	if v.hasMethodFlag() {
-		return inParam(v.MethodType(), i)
+		return v.MethodType().convToFn().inParam(i)
 	}
-	return inParam(v.Type, i)
+	return v.Type.convToFn().inParam(i)
 }
 
 func (v Value) NumIn() int {
@@ -698,9 +700,9 @@ func (v Value) NumIn() int {
 
 func (v Value) Out(i int) *RType {
 	if v.hasMethodFlag() {
-		return outParam(v.MethodType(), i)
+		return v.MethodType().convToFn().outParam(i)
 	}
-	return outParam(v.Type, i)
+	return v.Type.convToFn().outParam(i)
 }
 
 func (v Value) NumOut() int {

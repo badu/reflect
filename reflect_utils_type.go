@@ -143,14 +143,14 @@ func appendBitVector(vec *bitVector, bit uint8) {
 func funcStr(ft *funcType) []byte {
 	result := make([]byte, 0, 64)
 	result = append(result, "func("...)
-	for i, t := range inParams(ft) {
+	for i, t := range ft.inParams() {
 		if i > 0 {
 			result = append(result, ", "...)
 		}
 		result = append(result, t.nomen()...)
 	}
 	result = append(result, ')')
-	out := outParams(ft)
+	out := ft.outParams()
 
 	switch len(out) {
 	case 0: // do nothing
@@ -169,54 +169,6 @@ func funcStr(ft *funcType) []byte {
 		result = append(result, ')')
 	}
 	return result
-}
-
-func inParams(fn *funcType) []*RType {
-	if fn.InLen == 0 {
-		return nil
-	}
-	offset := unsafe.Sizeof(*fn)
-	if fn.hasInfoFlag() {
-		offset += additionalOffset
-	}
-	return (*[1 << 20]*RType)(funcOffset(fn, offset))[:fn.InLen]
-}
-
-func outParams(fn *funcType) []*RType {
-	outCount := fn.OutLen & (1<<15 - 1)
-	if outCount == 0 {
-		return nil
-	}
-	offset := unsafe.Sizeof(*fn)
-	if fn.hasInfoFlag() {
-		offset += additionalOffset
-	}
-	return (*[1 << 20]*RType)(funcOffset(fn, offset))[fn.InLen : fn.InLen+outCount]
-}
-
-func inParam(t *RType, i int) *RType {
-	fn := t.convToFn()
-	offset := unsafe.Sizeof(*fn)
-	if fn.hasInfoFlag() {
-		offset += additionalOffset
-	}
-	if fn.InLen == 0 {
-		return nil
-	}
-	return (*[1 << 20]*RType)(funcOffset(fn, offset))[:fn.InLen][i]
-}
-
-func outParam(t *RType, i int) *RType {
-	fn := t.convToFn()
-	offset := unsafe.Sizeof(*fn)
-	if fn.hasInfoFlag() {
-		offset += additionalOffset
-	}
-	outCount := fn.OutLen & (1<<15 - 1) // fn.OutLen & (1<<15) != 0 meaning variadic
-	if outCount == 0 {
-		return nil
-	}
-	return (*[1 << 20]*RType)(funcOffset(fn, offset))[fn.InLen : fn.InLen+outCount][i]
 }
 
 func exportedMethods(t *RType) []method {
@@ -327,7 +279,7 @@ func funcLayout(t *RType, rcvr *RType) (*RType, uintptr, uintptr, *bitVector) {
 		offset += PtrSize
 	}
 
-	for _, in := range inParams(funcType) {
+	for _, in := range funcType.inParams() {
 		offset += -offset & uintptr(in.align-1)
 		if in.hasPointers() {
 			in.addTypeBits(ptrBitVector, offset)
@@ -342,7 +294,7 @@ func funcLayout(t *RType, rcvr *RType) (*RType, uintptr, uintptr, *bitVector) {
 	offset += -offset & (PtrSize - 1)
 	retOffset := offset
 
-	for _, out := range outParams(funcType) {
+	for _, out := range funcType.outParams() {
 		offset += -offset & uintptr(out.align-1)
 		if out.hasPointers() {
 			out.addTypeBits(ptrBitVector, offset)
