@@ -83,8 +83,7 @@ func ifaceE2I(t *RType, src interface{}, dst unsafe.Pointer)
 // as its context register, and its job is to invoke callMethod(ctxt, frame)
 // where ctxt is the context register and frame is a pointer to the first
 // word in the passed-in argument frame.
-//go:linkname methodValueCall reflect.methodValueCall
-func methodValueCall()
+func callValueMethod()
 
 // call calls fn with a copy of the n argument bytes pointed at by arg.
 // After fn returns, reflectcall copies n-retoffset result bytes
@@ -132,10 +131,9 @@ func mapiternext(it unsafe.Pointer)
 //go:linkname maplen reflect.maplen
 func maplen(m unsafe.Pointer) int
 
-// makeFuncStub is an assembly function that is the code half of
+// stubFunction is an assembly function that is the code half of
 // the function returned from MakeFunc. It expects a *callReflectFunc
 // as its context register, and its job is to invoke callReflect(ctxt, frame)
 // where ctxt is the context register and frame is a pointer to the first
 // word in the passed-in argument frame.
-//go:linkname makeFuncStub reflect.makeFuncStub
-func makeFuncStub()
+func stubFunction()

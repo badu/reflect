@@ -293,7 +293,7 @@ func (v Value) Pointer() uintptr {
 			// created via reflect have the same underlying code pointer,
 			// so their Pointers are equal. The function used here must
 			// match the one used in makeMethodValue.
-			f := methodValueCall
+			f := callValueMethod
 			return **(**uintptr)(unsafe.Pointer(&f))
 		}
 		p := v.pointer()
@@ -415,7 +415,7 @@ func (v Value) makeMethodValue() Value {
 	// Indirect Go func value (dummy) to obtain
 	// actual code address. (A Go func value is a pointer
 	// to a C function pointer. https://golang.org/s/go11func.)
-	dummy := methodValueCall
+	dummy := callValueMethod
 	code := **(**uintptr)(unsafe.Pointer(&dummy))
 
 	// methodValue contains a stack map for use by the runtime

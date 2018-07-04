@@ -431,7 +431,7 @@ func callReflect(ctxt *makeFuncImpl, frame unsafe.Pointer) {
 			v := out[i]
 			if v.Type != typ {
 				// TODO : on MakeFunc it panics here if the signature of the returned function is wrong
-				panic("reflect: function created by MakeFunc using " + funcName(f) + " returned wrong type: have " + out[i].Type.String() + " for " + typ.String())
+				panic("reflect: function created by MakeFunc using `" + funcName(f) + "` returned wrong type: have `" + out[i].Type.String() + "` for `" + typ.String() + "`")
 			}
 			if v.Flag&exportFlag != 0 {
 				panic("reflect: function created by MakeFunc using " + funcName(f) + " returned value obtained from unexported field")

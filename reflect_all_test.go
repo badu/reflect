@@ -4595,7 +4595,7 @@ func TestNewVsConstr(t *testing.T) {
 func TestMakeFunc(t *testing.T) {
 	f := dummy
 	fv := MakeFunc(TypeOf(f), func(in []Value) []Value { return in })
-	ReflectOn(&f).Deref().Set(fv)
+	ReflectOnPtr(&f).Set(fv)
 
 	// Call g with small arguments so that there is
 	// something predictable (and different from the

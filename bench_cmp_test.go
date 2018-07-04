@@ -44,6 +44,8 @@ type (
 		Street NullString `json:"street"`
 	}
 
+	UsersCollection []User
+
 	User struct {
 		Entity
 		FirstName NullString `json:"firstName"`
