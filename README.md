@@ -1,5 +1,5 @@
 # reflect
 
-Standard `reflect` package arranged for my needs
+Do you hide from reflection? Are you becoming a vampire?
 
-This will probably always work in progress.
+Standard `reflect` package arranged for my needs (using reflect on low memory devices with minimum costs).
